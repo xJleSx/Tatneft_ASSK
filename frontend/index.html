@@ -110,6 +110,62 @@
     code { background: var(--bg); padding: 2px 6px; border-radius: 3px; font-size: 12px; }
     .pct-bar { background: var(--bg); height: 8px; border-radius: 4px; overflow: hidden; margin-top: 4px; }
     .pct-bar > div { height: 100%; background: var(--green); }
+
+    /* Modal */
+    .modal-bg {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 100;
+      align-items: center; justify-content: center;
+    }
+    .modal-bg.open { display: flex; }
+    .modal {
+      background: var(--panel);
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 24px;
+      width: 100%;
+      max-width: 560px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal h2 { margin: 0 0 16px; font-size: 18px; }
+    .modal label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+      margin-top: 12px;
+    }
+    .modal input, .modal select, .modal textarea {
+      width: 100%;
+      padding: 8px 10px;
+      margin-bottom: 0;
+      font-size: 14px;
+    }
+    .modal textarea { min-height: 60px; resize: vertical; }
+    .modal .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .modal .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+    .modal .actions button { width: auto; padding: 8px 18px; }
+    .modal .secondary { background: var(--panel2); color: var(--text); }
+    .modal .secondary:hover { background: #475569; }
+    .modal .err { color: var(--red); font-size: 13px; margin-top: 8px; min-height: 18px; }
+    .primary-btn {
+      background: var(--accent); color: #0f172a;
+      padding: 8px 16px; font-size: 14px; font-weight: 600;
+      border: none; border-radius: 6px; cursor: pointer;
+    }
+    .primary-btn:hover { background: #0ea5e9; }
+    .toast {
+      position: fixed; bottom: 24px; right: 24px;
+      padding: 12px 18px; border-radius: 6px;
+      background: var(--panel); border: 1px solid var(--green);
+      color: var(--text); font-size: 14px; z-index: 200;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+    .toast.err { border-color: var(--red); }
   </style>
 </head>
 <body>
@@ -137,8 +193,9 @@
         <h1>АСКК Татнефть — Дашборд</h1>
         <div class="meta" id="who">…</div>
       </div>
-      <div>
-        <a href="http://localhost:8000/docs" target="_blank" style="font-size: 13px; margin-right: 16px">API docs ↗</a>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <button class="primary-btn" id="new-order-btn" style="display:none">＋ Создать наряд</button>
+        <a href="http://localhost:8000/docs" target="_blank" style="font-size: 13px;">API docs ↗</a>
         <button class="logout" id="logout-btn">Выйти</button>
       </div>
     </header>
@@ -173,6 +230,48 @@
       </div>
     </div>
   </div>
+
+  <!-- Modal: create work order -->
+  <div id="order-modal" class="modal-bg">
+    <div class="modal">
+      <h2>Новый наряд-заказ</h2>
+      <form id="order-form">
+        <label for="of-worktype">Тип работ *</label>
+        <select id="of-worktype" required></select>
+
+        <label for="of-object">Объект (скважина) *</label>
+        <select id="of-object" required></select>
+
+        <label for="of-contractor">Подрядчик *</label>
+        <select id="of-contractor" required></select>
+
+        <div class="row">
+          <div>
+            <label for="of-start">Плановое начало *</label>
+            <input id="of-start" type="datetime-local" required />
+          </div>
+          <div>
+            <label for="of-end">Плановое окончание *</label>
+            <input id="of-end" type="datetime-local" required />
+          </div>
+        </div>
+
+        <label for="of-cost">Плановая стоимость (₽)</label>
+        <input id="of-cost" type="number" min="0" step="1000" value="120000" />
+
+        <label for="of-desc">Описание</label>
+        <textarea id="of-desc" placeholder="Бригада, доп. условия…"></textarea>
+
+        <div class="err" id="of-err"></div>
+        <div class="actions">
+          <button type="button" class="secondary" id="of-cancel">Отмена</button>
+          <button type="submit" id="of-submit">Создать</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" style="display:none"></div>
 </div>
 
 <script>
@@ -402,6 +501,153 @@ if (localStorage.getItem(TOKEN_KEY)) {
 } else {
   showLogin();
 }
-</script>
+
+// ===========================================================================
+// Create order modal
+// ===========================================================================
+const ALLOWED_CREATE_ROLES = new Set(["admin", "manager"]);
+
+function toLocalInputValue(d) {
+  // datetime-local expects "YYYY-MM-DDTHH:MM"
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function toIsoFromLocal(v) {
+  // local datetime → ISO с зоной (трактуем как локальное время браузера)
+  return new Date(v).toISOString();
+}
+
+let workTypesCache = [];
+let objectsCache = [];
+let contractorsCache = [];
+
+async function loadOrderFormData() {
+  const [wts, objs, contrs] = await Promise.all([
+    api("/works/types"),
+    api("/objects?limit=500"),
+    api("/contractors?limit=500"),
+  ]);
+  workTypesCache = wts;
+  // Только скважины (kind == "well")
+  objectsCache = objs.filter((o) => o.kind === "well");
+  contractorsCache = contrs.filter((c) => c.is_active !== false);
+
+  const wtSel = $("of-worktype");
+  wtSel.innerHTML =
+    `<option value="">— выберите —</option>` +
+    workTypesCache
+      .map((w) => `<option value="${w.id}">${w.code} — ${w.name}</option>`)
+      .join("");
+
+  const objSel = $("of-object");
+  objSel.innerHTML =
+    `<option value="">— выберите —</option>` +
+    objectsCache
+      .map((o) => `<option value="${o.id}">${o.code} — ${o.name}</option>`)
+      .join("");
+
+  filterContractorsByWorkType();
+}
+
+function filterContractorsByWorkType() {
+  const wtId = $("of-worktype").value;
+  const wt = workTypesCache.find((w) => w.id === wtId);
+  const sel = $("of-contractor");
+  const list = wt
+    ? contractorsCache.filter((c) =>
+        (c.specializations || "").split(",").includes(wt.code),
+      )
+    : contractorsCache;
+  sel.innerHTML =
+    `<option value="">— выберите —</option>` +
+    list
+      .map(
+        (c) =>
+          `<option value="${c.id}">${c.name} (★ ${(c.rating_score ?? 0).toFixed(1)})</option>`,
+      )
+      .join("");
+  if (list.length === 0) {
+    sel.innerHTML += `<option value="" disabled>Нет подрядчиков с допуском к этому типу работ</option>`;
+  }
+}
+
+function openOrderModal() {
+  // дефолты: сейчас и +8ч
+  const now = new Date();
+  const later = new Date(now.getTime() + 8 * 3600 * 1000);
+  $("of-start").value = toLocalInputValue(now);
+  $("of-end").value = toLocalInputValue(later);
+  $("of-desc").value = "";
+  $("of-err").textContent = "";
+  $("of-submit").disabled = false;
+  $("order-modal").classList.add("open");
+  if (!workTypesCache.length) {
+    loadOrderFormData().catch((e) => ($("of-err").textContent = "Ошибка загрузки: " + e.message));
+  }
+}
+
+function closeOrderModal() {
+  $("order-modal").classList.remove("open");
+}
+
+function toast(msg, isErr = false) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.toggle("err", isErr);
+  t.style.display = "block";
+  setTimeout(() => (t.style.display = "none"), 3500);
+}
+
+async function submitOrder(e) {
+  e.preventDefault();
+  $("of-err").textContent = "";
+  $("of-submit").disabled = true;
+
+  const body = {
+    object_id: $("of-object").value,
+    work_type_id: $("of-worktype").value,
+    contractor_id: $("of-contractor").value,
+    planned_start_at: toIsoFromLocal($("of-start").value),
+    planned_end_at: toIsoFromLocal($("of-end").value),
+    planned_cost: Number($("of-cost").value) || 0,
+    description: $("of-desc").value || null,
+  };
+
+  try {
+    const created = await api("/orders/", { method: "POST", body: JSON.stringify(body) });
+    closeOrderModal();
+    toast(`Наряд ${created.number} создан ✓`);
+    loadDashboard();
+  } catch (err) {
+    $("of-err").textContent = err.message;
+    $("of-submit").disabled = false;
+  }
+}
+
+async function initRoleBasedUi() {
+  try {
+    const me = await api("/auth/me");
+    if (ALLOWED_CREATE_ROLES.has(me.role)) {
+      $("new-order-btn").style.display = "inline-block";
+      $("new-order-btn").addEventListener("click", openOrderModal);
+    }
+  } catch {}
+}
+
+$("of-worktype").addEventListener("change", filterContractorsByWorkType);
+$("of-cancel").addEventListener("click", closeOrderModal);
+$("order-form").addEventListener("submit", submitOrder);
+$("order-modal").addEventListener("click", (e) => {
+  if (e.target === $("order-modal")) closeOrderModal();
+});
+
+// Хук: инициализируем роли при показе приложения
+const _origShowApp = showApp;
+showApp = function () {
+  _origShowApp();
+  initRoleBasedUi();
+};
+
 </body>
 </html>
