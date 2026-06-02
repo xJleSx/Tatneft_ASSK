@@ -3,271 +3,859 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>АСКК Татнефть — Дашборд (прототип)</title>
+  <title>АСКК · Добыча</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap&subset=cyrillic,cyrillic-ext,latin" rel="stylesheet">
   <style>
-    * { box-sizing: border-box; }
+    /* ============================================================
+       Design tokens
+       ============================================================ */
     :root {
-      --bg: #0f172a;
-      --panel: #1e293b;
-      --panel2: #334155;
-      --text: #e2e8f0;
-      --muted: #94a3b8;
-      --accent: #38bdf8;
-      --green: #22c55e;
-      --red: #ef4444;
-      --yellow: #f59e0b;
-      --blue: #3b82f6;
-      --purple: #a855f7;
+      /* Surfaces */
+      --bg:        #1a1814;
+      --bg-2:      #100e0a;
+      --panel:     #232019;
+      --panel-2:   #2c2920;
+      --panel-3:   #363128;
+      --line:      #3a352c;
+      --line-2:    #524a3e;
+      --line-3:    #6a604f;
+
+      /* Ink */
+      --ink:       #f3ede0;
+      --ink-2:     #d6cebd;
+      --ink-3:     #a89e8a;
+      --muted:     #7d7560;
+      --dim:       #4d4636;
+
+      /* Signals */
+      --signal:    #d68a2c;   /* amber, control-panel */
+      --signal-2:  #eaa74a;
+      --ok:        #8aaa5a;   /* olive green */
+      --bad:       #c66a4f;   /* rust red */
+      --warn:      #d6a648;
+      --info:      #6e9bb1;
+
+      /* Typography */
+      --font-sans: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
     }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
     body {
-      margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      font-family: var(--font-sans);
       background: var(--bg);
-      color: var(--text);
+      color: var(--ink);
+      font-size: 14px;
+      line-height: 1.5;
+      font-feature-settings: 'ss01', 'cv11';
       min-height: 100vh;
+
+      /* Subtle paper-grid background */
+      background-image:
+        linear-gradient(rgba(255, 240, 200, 0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 240, 200, 0.015) 1px, transparent 1px);
+      background-size: 32px 32px;
     }
-    header {
+    body::before {
+      /* Faint vignette */
+      content: '';
+      position: fixed; inset: 0;
+      pointer-events: none;
+      background: radial-gradient(ellipse at top, transparent 0%, rgba(0,0,0,0.25) 100%);
+    }
+
+    a { color: var(--signal); text-decoration: none; }
+    a:hover { color: var(--signal-2); }
+    code { font-family: var(--font-mono); font-size: 12px; background: var(--bg-2); padding: 1px 5px; border-radius: 2px; color: var(--ink-2); }
+
+    /* ============================================================
+       Login
+       ============================================================ */
+    .login-wrap {
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .login-box {
+      width: 380px;
       background: var(--panel);
-      padding: 16px 24px;
-      border-bottom: 1px solid #334155;
-      display: flex;
+      border: 1px solid var(--line-2);
+      padding: 36px 32px 28px;
+      position: relative;
+    }
+    .login-box::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--signal), var(--ok), var(--info));
+    }
+    .login-box .brand-mini { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; }
+    .login-box .brand-mini svg { color: var(--signal); }
+    .login-box .wordmark { font-weight: 800; letter-spacing: 0.04em; font-size: 16px; }
+    .login-box label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 6px; margin-top: 16px; }
+    .login-box input {
+      width: 100%; padding: 10px 12px;
+      background: var(--bg-2); color: var(--ink);
+      border: 1px solid var(--line-2);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      border-radius: 0;
+    }
+    .login-box input:focus { outline: 2px solid var(--signal); outline-offset: -2px; }
+    .login-box .login-btn {
+      margin-top: 24px; width: 100%;
+      padding: 12px;
+      background: var(--signal);
+      color: #1a1814;
+      border: none;
+      font-family: var(--font-sans);
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+    .login-box .login-btn:hover { background: var(--signal-2); }
+    .login-box .login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .login-box .err { color: var(--bad); font-size: 13px; min-height: 18px; margin-top: 12px; }
+    .login-box .hint { font-size: 12px; color: var(--muted); margin-top: 24px; line-height: 1.6; }
+    .login-box .hint code { font-size: 11px; }
+
+    /* ============================================================
+       Header
+       ============================================================ */
+    header.app {
+      border-bottom: 1px solid var(--line-2);
+      background: var(--bg-2);
+      position: sticky; top: 0; z-index: 50;
+    }
+    .header-top {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
       align-items: center;
-      justify-content: space-between;
+      gap: 32px;
+      padding: 14px 28px 12px;
     }
-    header h1 { margin: 0; font-size: 20px; font-weight: 600; }
-    header .meta { color: var(--muted); font-size: 13px; }
-    .container { padding: 24px; max-width: 1400px; margin: 0 auto; }
-    .grid { display: grid; gap: 16px; }
-    .g4 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
-    .g2 { grid-template-columns: 2fr 1fr; }
-    .card {
-      background: var(--panel);
-      border-radius: 8px;
-      padding: 16px 20px;
-      border: 1px solid #334155;
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-mark {
+      width: 36px; height: 36px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--signal);
+      background: var(--bg);
+      border: 1px solid var(--line-2);
     }
-    .card h2 { margin: 0 0 12px; font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
-    .kpi { font-size: 32px; font-weight: 700; }
-    .kpi-row { display: flex; align-items: baseline; gap: 8px; }
-    .kpi-sub { color: var(--muted); font-size: 13px; }
-    .kpi.green { color: var(--green); }
-    .kpi.red { color: var(--red); }
-    .kpi.yellow { color: var(--yellow); }
-    .kpi.blue { color: var(--blue); }
-    .kpi.purple { color: var(--purple); }
-    table { width: 100%; border-collapse: collapse; font-size: 14px; }
-    th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #334155; }
-    th { color: var(--muted); font-weight: 500; font-size: 12px; text-transform: uppercase; }
-    tr:hover { background: var(--panel2); }
-    .badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 4px;
+    .brand-text .wordmark {
+      font-weight: 800; font-size: 17px;
+      letter-spacing: 0.06em;
+      color: var(--ink);
+    }
+    .brand-text .wordmark .dot { color: var(--signal); margin: 0 2px; }
+    .brand-text .tagline {
+      font-size: 10.5px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      font-weight: 500;
+      margin-top: 2px;
+    }
+
+    .status-pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--font-mono);
       font-size: 11px;
-      font-weight: 600;
+      letter-spacing: 0.05em;
+      color: var(--ink-3);
       text-transform: uppercase;
     }
-    .badge.green { background: rgba(34, 197, 94, 0.15); color: var(--green); }
-    .badge.red { background: rgba(239, 68, 68, 0.15); color: var(--red); }
-    .badge.yellow { background: rgba(245, 158, 11, 0.15); color: var(--yellow); }
-    .badge.blue { background: rgba(59, 130, 246, 0.15); color: var(--blue); }
-    .badge.gray { background: rgba(148, 163, 184, 0.15); color: var(--muted); }
-    .badge.purple { background: rgba(168, 85, 247, 0.15); color: var(--purple); }
-    .login-box {
-      max-width: 360px;
-      margin: 100px auto;
-      background: var(--panel);
-      padding: 32px;
-      border-radius: 12px;
-      border: 1px solid #334155;
+    .status-pill .live-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--ok);
+      box-shadow: 0 0 0 0 rgba(138, 170, 90, 0.6);
+      animation: pulse 2.2s infinite;
     }
-    .login-box h1 { margin: 0 0 24px; text-align: center; }
-    input, button {
-      width: 100%;
-      padding: 10px 14px;
-      margin-bottom: 12px;
-      border: 1px solid #334155;
-      background: var(--bg);
-      color: var(--text);
-      border-radius: 6px;
-      font-size: 14px;
+    @keyframes pulse {
+      0%   { box-shadow: 0 0 0 0 rgba(138, 170, 90, 0.6); }
+      70%  { box-shadow: 0 0 0 6px rgba(138, 170, 90, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(138, 170, 90, 0); }
     }
-    button {
-      background: var(--accent);
-      color: #0f172a;
-      font-weight: 600;
-      cursor: pointer;
-      border: none;
-    }
-    button:hover { background: #0ea5e9; }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    .error { color: var(--red); font-size: 13px; margin-top: 8px; }
-    .logout { background: transparent; color: var(--muted); border: 1px solid #334155; padding: 6px 12px; font-size: 12px; }
-    .logout:hover { background: var(--panel2); color: var(--text); }
-    a { color: var(--accent); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    .empty { color: var(--muted); text-align: center; padding: 20px; }
-    code { background: var(--bg); padding: 2px 6px; border-radius: 3px; font-size: 12px; }
-    .pct-bar { background: var(--bg); height: 8px; border-radius: 4px; overflow: hidden; margin-top: 4px; }
-    .pct-bar > div { height: 100%; background: var(--green); }
 
-    /* Modal */
+    .user-bar { display: flex; align-items: center; gap: 14px; }
+    .user-block { text-align: right; }
+    .user-block .name { font-weight: 600; font-size: 13px; color: var(--ink); }
+    .user-block .role {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      color: var(--signal);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .user-block .email { font-size: 11px; color: var(--muted); font-family: var(--font-mono); margin-top: 1px; }
+
+    .btn {
+      cursor: pointer;
+      font-family: var(--font-sans);
+      font-weight: 600;
+      font-size: 12.5px;
+      letter-spacing: 0.04em;
+      padding: 8px 14px;
+      border: 1px solid transparent;
+      border-radius: 0;
+      display: inline-flex; align-items: center; gap: 6px;
+      transition: background 80ms;
+    }
+    .btn-primary { background: var(--signal); color: #1a1814; }
+    .btn-primary:hover { background: var(--signal-2); }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-ghost { background: transparent; color: var(--ink-3); border-color: var(--line-2); }
+    .btn-ghost:hover { color: var(--ink); border-color: var(--line-3); }
+    .btn-success { background: var(--ok); color: #1a1814; }
+    .btn-success:hover { background: #9bbd6b; }
+    .btn-danger { background: var(--bad); color: #1a1814; }
+    .btn-danger:hover { background: #d8826a; }
+    .btn-sm { padding: 5px 10px; font-size: 11.5px; }
+    .btn svg { width: 14px; height: 14px; }
+
+    /* ============================================================
+       Stats ticker (under header)
+       ============================================================ */
+    .stats-ticker {
+      display: flex;
+      align-items: stretch;
+      border-top: 1px solid var(--line);
+      background: var(--bg);
+    }
+    .stat {
+      flex: 1;
+      padding: 14px 20px;
+      border-right: 1px solid var(--line);
+      display: flex; flex-direction: column; gap: 4px;
+      position: relative;
+    }
+    .stat:last-of-type { border-right: 1px solid var(--line-2); }
+    .stat .label {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .stat .label .marker { width: 4px; height: 4px; background: currentColor; }
+    .stat .value {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 28px;
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+      line-height: 1.1;
+    }
+    .stat .value .pct { color: var(--ok); font-size: 18px; margin-left: 4px; }
+    .stat .delta { font-size: 11px; color: var(--muted); font-family: var(--font-mono); }
+    .stat.is-ok .value { color: var(--ok); }
+    .stat.is-warn .value { color: var(--warn); }
+    .stat.is-bad .value { color: var(--bad); }
+    .stat.is-signal .value { color: var(--signal); }
+
+    .ticker-controls {
+      display: flex; align-items: center; gap: 12px;
+      padding: 0 20px;
+      border-left: 1px solid var(--line-2);
+      background: var(--bg-2);
+    }
+    .ticker-controls label { font-size: 11px; color: var(--muted); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em; display: flex; align-items: center; gap: 6px; cursor: pointer; }
+    .ticker-controls input[type="checkbox"] { accent-color: var(--signal); cursor: pointer; }
+    .ticker-controls .last { font-size: 11px; color: var(--ink-3); font-family: var(--font-mono); }
+
+    /* ============================================================
+       Main layout
+       ============================================================ */
+    main {
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 24px 28px 80px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+    .cols-2 { display: grid; grid-template-columns: 1.7fr 1fr; gap: 20px; }
+
+    section.card {
+      background: var(--panel);
+      border: 1px solid var(--line-2);
+    }
+    .card-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--line);
+      background: var(--bg-2);
+    }
+    .card-title {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--ink-2);
+    }
+    .card-title svg { width: 14px; height: 14px; color: var(--signal); }
+    .card-title .counter {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      padding: 1px 6px;
+      border: 1px solid var(--line-2);
+      margin-left: 4px;
+    }
+    .card-body { padding: 16px 20px; }
+
+    /* ============================================================
+       Review items (left-stripe design)
+       ============================================================ */
+    .review-item {
+      display: grid;
+      grid-template-columns: 4px 1fr auto;
+      gap: 14px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .review-item:last-child { border-bottom: none; }
+    .review-item .stripe { background: var(--warn); }
+    .review-item.is-good .stripe { background: var(--ok); }
+    .review-item.is-bad .stripe { background: var(--bad); }
+    .review-item .head {
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--ink-2);
+    }
+    .review-item .head .num { color: var(--ink); font-weight: 600; }
+    .review-item .head .ago { color: var(--muted); }
+    .review-item .meta { font-size: 12px; color: var(--ink-3); margin-top: 4px; line-height: 1.6; }
+    .review-item .meta code { color: var(--ink-2); }
+    .review-item .score {
+      font-family: var(--font-mono);
+      font-size: 22px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: var(--ink);
+      text-align: right;
+    }
+    .review-item.is-good .score { color: var(--ok); }
+    .review-item.is-bad .score { color: var(--bad); }
+    .review-item .actions {
+      grid-column: 2 / -1;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .review-item input.comment {
+      grid-column: 1 / -1;
+      background: var(--bg-2);
+      border: 1px solid var(--line);
+      color: var(--ink);
+      padding: 6px 10px;
+      font-family: var(--font-sans);
+      font-size: 12.5px;
+      border-radius: 0;
+    }
+    .review-item input.comment:focus { outline: 1px solid var(--signal); }
+    .review-item .actions button { justify-content: center; }
+
+    /* ============================================================
+       Tables (orders)
+       ============================================================ */
+    .filters {
+      display: flex; flex-wrap: wrap; gap: 0;
+      padding: 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .chip {
+      padding: 8px 14px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      cursor: pointer;
+      border-right: 1px solid var(--line);
+      background: var(--bg-2);
+      user-select: none;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .chip:hover { color: var(--ink); background: var(--panel-2); }
+    .chip.active {
+      color: var(--signal);
+      background: var(--panel);
+      box-shadow: inset 0 -2px 0 var(--signal);
+    }
+    .chip .count {
+      font-size: 10px;
+      color: var(--muted);
+    }
+    .chip.active .count { color: var(--signal-2); }
+
+    table.orders {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+    }
+    table.orders th, table.orders td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+    }
+    table.orders th {
+      font-family: var(--font-sans);
+      font-weight: 600;
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      background: var(--bg-2);
+    }
+    table.orders tbody tr { cursor: pointer; }
+    table.orders tbody tr:hover { background: var(--panel-2); }
+    table.orders td.num { color: var(--ink); font-weight: 600; }
+    table.orders td.ts { color: var(--ink-3); font-size: 11.5px; }
+
+    /* Status as left stripe cell (not pill) */
+    .status-cell {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--ink-2);
+    }
+    .status-cell .bar {
+      width: 3px; height: 14px; display: inline-block;
+    }
+    .status-cell .bar.gray       { background: var(--dim); }
+    .status-cell .bar.blue       { background: var(--info); }
+    .status-cell .bar.yellow     { background: var(--warn); }
+    .status-cell .bar.green      { background: var(--ok); }
+    .status-cell .bar.red        { background: var(--bad); }
+    .status-cell .bar.purple     { background: #a47bbf; }
+    .status-cell .bar.orange     { background: var(--signal); }
+
+    /* ============================================================
+       Ranking (contractors)
+       ============================================================ */
+    .ranking-row {
+      display: grid;
+      grid-template-columns: 28px 1fr auto;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .ranking-row:last-child { border-bottom: none; }
+    .ranking-row .place {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--muted);
+      text-align: right;
+    }
+    .ranking-row.top-1 .place { color: var(--signal); }
+    .ranking-row.top-2 .place { color: var(--ink-2); }
+    .ranking-row.top-3 .place { color: var(--warn); }
+    .ranking-row .name { font-size: 13px; color: var(--ink); }
+    .ranking-row .score {
+      font-family: var(--font-mono);
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--ok);
+      font-variant-numeric: tabular-nums;
+    }
+    .ranking-row .bar-wrap {
+      grid-column: 1 / -1;
+      height: 4px;
+      background: var(--bg-2);
+      position: relative;
+      margin-top: 6px;
+    }
+    .ranking-row .bar-fill {
+      position: absolute; left: 0; top: 0; bottom: 0;
+      background: var(--ok);
+    }
+    .ranking-row.top-1 .bar-fill { background: var(--signal); }
+    .ranking-row.top-2 .bar-fill { background: var(--ink-2); }
+    .ranking-row.top-3 .bar-fill { background: var(--warn); }
+
+    /* ============================================================
+       Acts breakdown
+       ============================================================ */
+    .acts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0;
+    }
+    .act-tile {
+      padding: 14px 16px;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+    .act-tile .name {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .act-tile .name .swatch { width: 8px; height: 8px; }
+    .act-tile .num {
+      font-family: var(--font-mono);
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+      margin-top: 4px;
+    }
+
+    /* ============================================================
+       Empty state
+       ============================================================ */
+    .empty {
+      color: var(--muted);
+      padding: 28px 16px;
+      text-align: center;
+      font-size: 13px;
+    }
+    .empty .icon { color: var(--dim); margin-bottom: 8px; }
+
+    /* ============================================================
+       Modals
+       ============================================================ */
     .modal-bg {
       display: none;
       position: fixed; inset: 0;
-      background: rgba(0,0,0,0.6);
+      background: rgba(10, 8, 6, 0.75);
+      backdrop-filter: blur(2px);
       z-index: 100;
-      align-items: center; justify-content: center;
+      align-items: flex-start; justify-content: center;
+      padding: 60px 16px;
+      overflow-y: auto;
     }
     .modal-bg.open { display: flex; }
     .modal {
       background: var(--panel);
-      border: 1px solid #334155;
-      border-radius: 10px;
-      padding: 24px;
+      border: 1px solid var(--line-2);
       width: 100%;
       max-width: 560px;
-      max-height: 90vh;
-      overflow-y: auto;
+      position: relative;
     }
-    .modal h2 { margin: 0 0 16px; font-size: 18px; }
+    .modal.wide { max-width: 720px; }
+    .modal::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--signal);
+    }
+    .modal h2 {
+      margin: 0;
+      padding: 16px 20px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--ink);
+      border-bottom: 1px solid var(--line);
+      background: var(--bg-2);
+    }
+    .modal .modal-body { padding: 20px; }
+    .modal .modal-foot {
+      padding: 14px 20px;
+      border-top: 1px solid var(--line);
+      display: flex; gap: 8px; justify-content: flex-end;
+      background: var(--bg-2);
+    }
     .modal label {
       display: block;
-      font-size: 12px;
+      font-size: 11px;
       color: var(--muted);
       text-transform: uppercase;
-      margin-bottom: 4px;
-      margin-top: 12px;
+      letter-spacing: 0.1em;
+      margin-bottom: 5px;
+      margin-top: 14px;
+      font-weight: 600;
     }
     .modal input, .modal select, .modal textarea {
       width: 100%;
-      padding: 8px 10px;
-      margin-bottom: 0;
-      font-size: 14px;
+      padding: 9px 12px;
+      background: var(--bg-2);
+      color: var(--ink);
+      border: 1px solid var(--line-2);
+      font-family: var(--font-sans);
+      font-size: 13.5px;
+      border-radius: 0;
     }
-    .modal textarea { min-height: 60px; resize: vertical; }
-    .modal .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .modal .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
-    .modal .actions button { width: auto; padding: 8px 18px; }
-    .modal .secondary { background: var(--panel2); color: var(--text); }
-    .modal .secondary:hover { background: #475569; }
-    .modal .err { color: var(--red); font-size: 13px; margin-top: 8px; min-height: 18px; }
-    .primary-btn {
-      background: var(--accent); color: #0f172a;
-      padding: 8px 16px; font-size: 14px; font-weight: 600;
-      border: none; border-radius: 6px; cursor: pointer;
+    .modal input:focus, .modal select:focus, .modal textarea:focus {
+      outline: 2px solid var(--signal);
+      outline-offset: -2px;
     }
-    .primary-btn:hover { background: #0ea5e9; }
+    .modal textarea { min-height: 64px; resize: vertical; }
+    .modal .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .modal .err { color: var(--bad); font-size: 12px; margin-top: 10px; min-height: 16px; font-family: var(--font-mono); }
+
+    .kv-grid { display: grid; grid-template-columns: 160px 1fr; gap: 6px 16px; font-size: 13px; }
+    .kv-grid dt { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
+    .kv-grid dd { margin: 0; color: var(--ink); font-family: var(--font-mono); }
+
+    /* ============================================================
+       Toast
+       ============================================================ */
     .toast {
       position: fixed; bottom: 24px; right: 24px;
-      padding: 12px 18px; border-radius: 6px;
-      background: var(--panel); border: 1px solid var(--green);
-      color: var(--text); font-size: 14px; z-index: 200;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      padding: 12px 18px;
+      background: var(--panel);
+      border: 1px solid var(--ok);
+      border-left: 4px solid var(--ok);
+      color: var(--ink);
+      font-size: 13.5px;
+      z-index: 200;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+      max-width: 360px;
+      animation: slidein 0.2s ease-out;
     }
-    .toast.err { border-color: var(--red); }
+    .toast.err { border-color: var(--bad); border-left-color: var(--bad); }
+    @keyframes slidein { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    /* ============================================================
+       Spinner / utilities
+       ============================================================ */
+    .spin { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--line-3); border-top-color: var(--signal); border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .mono { font-family: var(--font-mono); }
+    .tabular { font-variant-numeric: tabular-nums; }
   </style>
 </head>
 <body>
-<div id="root">
-  <!-- Login screen -->
-  <div id="login" class="login-box" style="display:none">
-    <h1>АСКК Татнефть</h1>
-    <p style="color: var(--muted); text-align: center; margin-top: -16px; margin-bottom: 24px;">
-      Прототип демо-дашборда
-    </p>
-    <input id="email" type="email" placeholder="email" value="admin@tatneft.ru" autocomplete="email" />
-    <input id="password" type="password" placeholder="пароль" value="password" autocomplete="current-password" />
-    <button id="login-btn">Войти</button>
-    <div id="login-error" class="error"></div>
-    <p style="font-size: 12px; color: var(--muted); margin-top: 16px;">
-      Тестовые учётки: <code>admin@tatneft.ru</code> / <code>password</code><br/>
-      Другие: <code>manager@</code>, <code>tech@</code>, <code>master@</code>, <code>contractor_*@</code>
-    </p>
-  </div>
 
-  <!-- Main dashboard -->
-  <div id="app" style="display:none">
-    <header>
+<!-- ====================== Login ====================== -->
+<div id="login" class="login-wrap" style="display:none">
+  <div class="login-box">
+    <div class="brand-mini">
+      <svg width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M6 28h24M6 24h24M9 24V14l9-8 9 8v10M14 24v-6h8v6"/>
+      </svg>
       <div>
-        <h1>АСКК Татнефть — Дашборд</h1>
-        <div class="meta" id="who">…</div>
-      </div>
-      <div style="display: flex; align-items: center; gap: 12px;">
-        <button class="primary-btn" id="new-order-btn" style="display:none">＋ Создать наряд</button>
-        <a href="http://localhost:8000/docs" target="_blank" style="font-size: 13px;">API docs ↗</a>
-        <button class="logout" id="logout-btn">Выйти</button>
-      </div>
-    </header>
-
-    <div class="container">
-      <!-- KPI cards -->
-      <div class="grid g4" id="kpi-grid"></div>
-
-      <!-- Main grid -->
-      <div class="grid g2" style="margin-top: 24px">
-        <div class="card">
-          <h2>Последние наряды-заказы</h2>
-          <div id="recent-orders">…</div>
-        </div>
-        <div class="card">
-          <h2>Рейтинг подрядчиков</h2>
-          <div id="ranking">…</div>
-        </div>
-      </div>
-
-      <div class="card" style="margin-top: 24px">
-        <h2>Акты по статусам (распределение)</h2>
-        <div id="acts-breakdown" class="grid g4">…</div>
-      </div>
-
-      <div class="card" style="margin-top: 24px; text-align: center; color: var(--muted); font-size: 13px;">
-        <p>
-          Это read-only прототип. Управление нарядами/актами — в
-          <a href="http://localhost:8000/docs" target="_blank">API docs</a>
-          или через <code>python scripts/demo.py</code>.
-        </p>
+        <div class="wordmark">АСКК <span style="color:var(--signal)">·</span> ДОБЫЧА</div>
+        <div class="brand-text" style="font-size:10px; color:var(--muted); letter-spacing:0.2em; text-transform:uppercase;">оперативная панель</div>
       </div>
     </div>
-  </div>
 
-  <!-- Modal: create work order -->
+    <label for="email">Email</label>
+    <input id="email" type="email" value="admin@tatneft.ru" autocomplete="email" />
+
+    <label for="password">Пароль</label>
+    <input id="password" type="password" value="password" autocomplete="current-password" />
+
+    <button class="login-btn" id="login-btn">Войти →</button>
+    <div class="err" id="login-error"></div>
+
+    <div class="hint">
+      Тестовые учётки (<code>password</code>):<br/>
+      <code>admin@tatneft.ru</code> · <code>manager@</code> · <code>tech@</code> · <code>master@</code> · <code>contractor_*@example.ru</code>
+    </div>
+  </div>
+</div>
+
+<!-- ====================== App ====================== -->
+<div id="app" style="display:none">
+  <header class="app">
+    <div class="header-top">
+      <div class="brand">
+        <div class="brand-mark">
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M3 18h16M3 15h16M6 15V9l5-5 5 5v6M9 15v-3h4v3"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <div class="wordmark">АСКК<span class="dot">·</span>ДОБЫЧА</div>
+          <div class="tagline">оперативная панель · v0.1 · прототип</div>
+        </div>
+      </div>
+
+      <div class="status-pill" style="justify-self: start;">
+        <span class="live-dot"></span>
+        <span>СИСТЕМА НА ЛИНИИ</span>
+      </div>
+
+      <div class="user-bar">
+        <div class="user-block">
+          <div class="name" id="user-name">—</div>
+          <div class="role" id="user-role">—</div>
+          <div class="email" id="user-email">—</div>
+        </div>
+        <button class="btn btn-primary" id="new-order-btn" style="display:none">
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 2v10M2 7h10"/></svg>
+          Новый наряд
+        </button>
+        <button class="btn btn-ghost" id="logout-btn">Выйти</button>
+      </div>
+    </div>
+
+    <div class="stats-ticker">
+      <div class="stat is-signal">
+        <div class="label"><span class="marker" style="background:var(--signal)"></span>Нарядов</div>
+        <div class="value" id="kpi-orders">—</div>
+        <div class="delta" id="kpi-orders-sub">всего в системе</div>
+      </div>
+      <div class="stat">
+        <div class="label"><span class="marker" style="background:var(--ink-3)"></span>Актов</div>
+        <div class="value" id="kpi-acts">—</div>
+        <div class="delta" id="kpi-acts-sub">за всё время</div>
+      </div>
+      <div class="stat is-warn">
+        <div class="label"><span class="marker" style="background:var(--warn)"></span>На проверке</div>
+        <div class="value" id="kpi-pending">—</div>
+        <div class="delta">требуют решения</div>
+      </div>
+      <div class="stat is-ok">
+        <div class="label"><span class="marker" style="background:var(--ok)"></span>Авто ✓</div>
+        <div class="value" id="kpi-auto">—</div>
+        <div class="delta" id="kpi-auto-sub">rule engine pass-rate</div>
+      </div>
+      <div class="stat is-bad">
+        <div class="label"><span class="marker" style="background:var(--bad)"></span>Отклонено</div>
+        <div class="value" id="kpi-rejected">—</div>
+        <div class="delta">вручную или auto-fail</div>
+      </div>
+
+      <div class="ticker-controls">
+        <label><input type="checkbox" id="auto-refresh" checked /> авто-рефреш 30с</label>
+        <span class="last" id="last-refresh">обновлено только что</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Review panel -->
+    <section class="card" id="review-panel" style="display:none">
+      <div class="card-head">
+        <div class="card-title">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 2h8v12H4zM4 5h8M6 8h4M6 10h3"/></svg>
+          Очередь проверки
+          <span class="counter" id="review-count">0</span>
+        </div>
+        <div style="font-size: 11px; color: var(--muted); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em;">
+          мастер · технолог · менеджер
+        </div>
+      </div>
+      <div class="card-body" id="review-list">…</div>
+    </section>
+
+    <div class="cols-2">
+      <!-- Orders -->
+      <section class="card">
+        <div class="card-head">
+          <div class="card-title">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 4h12M2 8h12M2 12h8M2 2h12v12H2z"/></svg>
+            Наряды-заказы
+          </div>
+        </div>
+        <div class="filters" id="status-chips">
+          <span class="chip active" data-status="">все</span>
+          <span class="chip" data-status="assigned">назначен</span>
+          <span class="chip" data-status="in_progress">в работе</span>
+          <span class="chip" data-status="submitted">на проверке</span>
+          <span class="chip" data-status="auto_confirmed">авто ✓</span>
+          <span class="chip" data-status="confirmed">подтверждён</span>
+          <span class="chip" data-status="rejected">отклонён</span>
+        </div>
+        <div class="card-body" id="recent-orders" style="padding: 0;">…</div>
+      </section>
+
+      <!-- Contractors ranking -->
+      <section class="card">
+        <div class="card-head">
+          <div class="card-title">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 1l2 4 5 1-3.5 3 1 5L8 12l-4.5 2 1-5L1 6l5-1z"/></svg>
+            Рейтинг подрядчиков
+          </div>
+        </div>
+        <div class="card-body" id="ranking">…</div>
+      </section>
+    </div>
+
+    <!-- Acts breakdown -->
+    <section class="card">
+      <div class="card-head">
+        <div class="card-title">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6"/><path d="M8 2v6l4 2"/></svg>
+          Акты по статусам
+        </div>
+        <div style="font-size: 11px; color: var(--muted); font-family: var(--font-mono);">
+          за всё время
+        </div>
+      </div>
+      <div class="card-body acts-grid" id="acts-breakdown">…</div>
+    </section>
+
+    <footer style="text-align: center; color: var(--muted); font-size: 12px; padding: 20px 0;">
+      Прототип · синтетические данные · <a href="http://localhost:8000/docs" target="_blank">API docs</a> ·
+      <code>python scripts/demo.py</code> для полного E2E
+    </footer>
+  </main>
+
+  <!-- ====================== Modals ====================== -->
   <div id="order-modal" class="modal-bg">
     <div class="modal">
       <h2>Новый наряд-заказ</h2>
       <form id="order-form">
-        <label for="of-worktype">Тип работ *</label>
-        <select id="of-worktype" required></select>
+        <div class="modal-body">
+          <label for="of-worktype">Тип работ *</label>
+          <select id="of-worktype" required></select>
 
-        <label for="of-object">Объект (скважина) *</label>
-        <select id="of-object" required></select>
+          <label for="of-object">Объект (скважина) *</label>
+          <select id="of-object" required></select>
 
-        <label for="of-contractor">Подрядчик *</label>
-        <select id="of-contractor" required></select>
+          <label for="of-contractor">Подрядчик *</label>
+          <select id="of-contractor" required></select>
 
-        <div class="row">
-          <div>
-            <label for="of-start">Плановое начало *</label>
-            <input id="of-start" type="datetime-local" required />
+          <div class="row-2">
+            <div>
+              <label for="of-start">Плановое начало *</label>
+              <input id="of-start" type="datetime-local" required />
+            </div>
+            <div>
+              <label for="of-end">Плановое окончание *</label>
+              <input id="of-end" type="datetime-local" required />
+            </div>
           </div>
-          <div>
-            <label for="of-end">Плановое окончание *</label>
-            <input id="of-end" type="datetime-local" required />
-          </div>
+
+          <label for="of-cost">Плановая стоимость, ₽</label>
+          <input id="of-cost" type="number" min="0" step="1000" value="120000" />
+
+          <label for="of-desc">Описание / примечание</label>
+          <textarea id="of-desc" placeholder="Бригада, доп. условия…"></textarea>
+
+          <div class="err" id="of-err"></div>
         </div>
-
-        <label for="of-cost">Плановая стоимость (₽)</label>
-        <input id="of-cost" type="number" min="0" step="1000" value="120000" />
-
-        <label for="of-desc">Описание</label>
-        <textarea id="of-desc" placeholder="Бригада, доп. условия…"></textarea>
-
-        <div class="err" id="of-err"></div>
-        <div class="actions">
-          <button type="button" class="secondary" id="of-cancel">Отмена</button>
-          <button type="submit" id="of-submit">Создать</button>
+        <div class="modal-foot">
+          <button type="button" class="btn btn-ghost" id="of-cancel">Отмена</button>
+          <button type="submit" class="btn btn-primary" id="of-submit">Создать наряд</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <div id="detail-modal" class="modal-bg">
+    <div class="modal wide">
+      <h2 id="detail-title">Детали наряда</h2>
+      <div class="modal-body" id="detail-body">…</div>
+      <div class="modal-foot">
+        <button type="button" class="btn btn-ghost" id="detail-close">Закрыть</button>
+      </div>
     </div>
   </div>
 
@@ -275,52 +863,64 @@
 </div>
 
 <script>
+// ===========================================================================
+// Config
+// ===========================================================================
 const API = "http://localhost:8000/api/v1";
 const TOKEN_KEY = "askk.token";
 const EMAIL_KEY = "askk.email";
+const ALLOWED_CREATE_ROLES = new Set(["admin", "manager"]);
+const REVIEW_ROLES = new Set(["master", "technologist", "manager", "admin"]);
 
-function $(id) { return document.getElementById(id); }
+const STATUS_META = {
+  draft:                 { bar: "gray",   label: "черновик" },
+  assigned:              { bar: "blue",   label: "назначен" },
+  in_progress:           { bar: "yellow", label: "в работе" },
+  submitted:             { bar: "yellow", label: "на проверке" },
+  auto_confirmed:        { bar: "green",  label: "авто ✓" },
+  confirmed:             { bar: "green",  label: "подтверждён" },
+  verified:              { bar: "green",  label: "верифицирован" },
+  rejected:              { bar: "red",    label: "отклонён" },
+  delayed_verification:  { bar: "yellow", label: "отложен" },
+  issue_found:           { bar: "red",    label: "дефект" },
+  cancelled:             { bar: "gray",   label: "отменён" },
+};
 
-function statusBadge(status) {
-  const map = {
-    draft: ["gray", "черновик"],
-    assigned: ["blue", "назначен"],
-    in_progress: ["yellow", "в работе"],
-    submitted: ["yellow", "на проверке"],
-    auto_confirmed: ["green", "авто ✓"],
-    confirmed: ["green", "подтверждён"],
-    verified: ["green", "верифицирован"],
-    rejected: ["red", "отклонён"],
-    delayed_verification: ["yellow", "отложен"],
-    issue_found: ["red", "дефект"],
-    cancelled: ["gray", "отменён"],
-  };
-  const [color, label] = map[status] || ["gray", status];
-  return `<span class="badge ${color}">${label}</span>`;
-}
+const $ = (id) => document.getElementById(id);
 
-function fmtDate(s) {
-  if (!s) return "—";
-  const d = new Date(s);
-  return d.toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" });
-}
-
+// ===========================================================================
+// API helpers
+// ===========================================================================
 async function api(path, opts = {}) {
   const token = localStorage.getItem(TOKEN_KEY);
   const headers = { "Content-Type": "application/json", ...(opts.headers || {}) };
   if (token) headers["Authorization"] = `Bearer ${token}`;
   const r = await fetch(`${API}${path}`, { ...opts, headers });
-  if (r.status === 401) {
-    logout();
-    throw new Error("unauthorized");
-  }
+  if (r.status === 401) { logout(); throw new Error("сессия истекла"); }
   if (!r.ok) {
-    const text = await r.text();
-    throw new Error(`HTTP ${r.status}: ${text}`);
+    const txt = await r.text();
+    try { throw new Error(JSON.parse(txt).detail || `HTTP ${r.status}`); }
+    catch { throw new Error(`HTTP ${r.status}: ${txt.slice(0, 100)}`); }
   }
   return r.status === 204 ? null : r.json();
 }
 
+function fmtDate(s) {
+  if (!s) return "—";
+  return new Date(s).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" });
+}
+function fmtRelative(d) {
+  if (!d) return "—";
+  const s = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (s < 5) return "только что";
+  if (s < 60) return `${s}с назад`;
+  if (s < 3600) return `${Math.floor(s / 60)}м назад`;
+  return d.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+}
+
+// ===========================================================================
+// Auth
+// ===========================================================================
 async function login() {
   const email = $("email").value.trim();
   const password = $("password").value;
@@ -333,8 +933,8 @@ async function login() {
       body: JSON.stringify({ email, password }),
     });
     if (!r.ok) {
-      const detail = await r.json();
-      $("login-error").textContent = detail.detail || "Ошибка входа";
+      const d = await r.json();
+      $("login-error").textContent = d.detail || "Ошибка входа";
       return;
     }
     const data = await r.json();
@@ -342,86 +942,107 @@ async function login() {
     localStorage.setItem(EMAIL_KEY, email);
     showApp();
   } catch (e) {
-    $("login-error").textContent = "Сеть недоступна: " + e.message;
+    $("login-error").textContent = "Сеть недоступна";
   } finally {
     $("login-btn").disabled = false;
   }
 }
-
 function logout() {
   localStorage.removeItem(TOKEN_KEY);
   showLogin();
 }
-
 function showLogin() {
-  $("login").style.display = "block";
+  $("login").style.display = "flex";
   $("app").style.display = "none";
 }
-
 function showApp() {
   $("login").style.display = "none";
   $("app").style.display = "block";
   loadDashboard();
 }
 
-async function loadDashboard() {
-  const email = localStorage.getItem(EMAIL_KEY) || "";
-  $("who").textContent = email;
+// ===========================================================================
+// Dashboard data
+// ===========================================================================
+let _allOrders = [];
+let _orderFilter = "";
+let _lastRefreshAt = null;
+let _refreshTimer = null;
 
+async function loadDashboard() {
+  // Кто я
   try {
     const me = await api("/auth/me");
-    $("who").textContent = `${me.full_name} (${me.role}) — ${me.email}`;
+    $("user-name").textContent = me.full_name || me.email;
+    $("user-role").textContent = me.role;
+    $("user-email").textContent = me.email;
+    window._currentUser = me;
   } catch {}
 
-  try {
-    const summary = await api("/dashboard/summary");
-    renderKPI(summary);
-  } catch (e) {
-    $("kpi-grid").innerHTML = `<div class="card error">Ошибка загрузки сводки: ${e.message}</div>`;
+  // Параллельная загрузка
+  const [sumR, ordR, rankR, actsR] = await Promise.all([
+    api("/dashboard/summary").catch((e) => ({ __err: e.message })),
+    api("/dashboard/orders/recent?limit=50").catch((e) => ({ __err: e.message })),
+    api("/dashboard/contractors/ranking").catch((e) => ({ __err: e.message })),
+    api("/acts?limit=100").catch((e) => ({ __err: e.message })),
+  ]);
+
+  if (sumR && !sumR.__err) renderKPI(sumR);
+  else $("kpi-orders").textContent = "—";
+
+  if (ordR && !ordR.__err) {
+    _allOrders = ordR;
+    applyOrderFilter();
+  } else {
+    $("recent-orders").innerHTML = `<div class="empty">${ordR?.__err || "—"}</div>`;
   }
 
-  try {
-    const orders = await api("/dashboard/orders/recent?limit=10");
-    renderOrders(orders);
-  } catch {}
+  if (rankR && !rankR.__err) renderRanking(rankR);
+  else $("ranking").innerHTML = `<div class="empty">${rankR?.__err || "—"}</div>`;
 
-  try {
-    const ranking = await api("/dashboard/contractors/ranking");
-    renderRanking(ranking);
-  } catch {}
+  if (actsR && !actsR.__err) {
+    renderActsBreakdown(actsR);
+    renderReviewPanel(actsR);
+  }
 
-  try {
-    const acts = await api("/acts?limit=100");
-    renderActsBreakdown(acts);
-  } catch {}
+  _lastRefreshAt = new Date();
+  updateRefreshLabel();
 }
 
+// ===========================================================================
+// Renderers
+// ===========================================================================
 function renderKPI(s) {
-  const items = [
-    { v: s.total_work_orders, l: "Нарядов всего", c: "blue" },
-    { v: s.total_acts, l: "Актов всего", c: "purple" },
-    { v: s.auto_confirmed, l: "Авто-подтверждено", c: "green" },
-    { v: s.pending_review, l: "На проверке", c: "yellow" },
-    { v: s.rejected, l: "Отклонено", c: "red" },
-    {
-      v: `${Math.round(s.auto_confirmation_rate * 100)}%`,
-      l: "Доля авто-подтв.",
-      c: "green",
-      pct: s.auto_confirmation_rate,
-    },
-  ];
-  $("kpi-grid").innerHTML = items
-    .map(
-      (i) => `
-      <div class="card">
-        <h2>${i.l}</h2>
-        <div class="kpi-row">
-          <div class="kpi ${i.c}">${i.v}</div>
-        </div>
-        ${i.pct != null ? `<div class="pct-bar"><div style="width:${(i.pct * 100).toFixed(0)}%"></div></div>` : ""}
-      </div>`,
-    )
-    .join("");
+  $("kpi-orders").textContent  = s.total_work_orders;
+  $("kpi-acts").textContent    = s.total_acts;
+  $("kpi-pending").textContent = s.pending_review;
+  $("kpi-auto").textContent    = `${Math.round((s.auto_confirmation_rate || 0) * 100)}%`;
+  $("kpi-rejected").textContent = s.rejected;
+  $("kpi-acts-sub").textContent = `+${s.acts_last_30d} за 30 дней`;
+}
+
+function statusCell(status) {
+  const m = STATUS_META[status] || { bar: "gray", label: status };
+  return `<span class="status-cell"><span class="bar ${m.bar}"></span>${m.label}</span>`;
+}
+
+function applyOrderFilter() {
+  const list = _orderFilter
+    ? _allOrders.filter((o) => o.status === _orderFilter)
+    : _allOrders;
+  renderOrders(list);
+  // Счётчики в чипах
+  const counts = {};
+  for (const o of _allOrders) counts[o.status] = (counts[o.status] || 0) + 1;
+  document.querySelectorAll("#status-chips .chip").forEach((c) => {
+    const s = c.dataset.status;
+    const el = c.querySelector(".count");
+    if (s === "") {
+      if (el) el.textContent = _allOrders.length;
+    } else {
+      if (el) el.textContent = counts[s] || 0;
+    }
+  });
 }
 
 function renderOrders(orders) {
@@ -430,23 +1051,25 @@ function renderOrders(orders) {
     return;
   }
   $("recent-orders").innerHTML = `
-    <table>
+    <table class="orders">
       <thead>
-        <tr><th>Номер</th><th>Статус</th><th>Создан</th></tr>
+        <tr><th style="width:38%">Номер</th><th>Статус</th><th>Создан</th></tr>
       </thead>
       <tbody>
         ${orders
           .map(
-            (o) => `
-          <tr>
-            <td><code>${o.number}</code></td>
-            <td>${statusBadge(o.status)}</td>
-            <td>${fmtDate(o.created_at)}</td>
-          </tr>`,
+            (o) => `<tr data-oid="${o.id}">
+              <td class="num">${o.number}</td>
+              <td>${statusCell(o.status)}</td>
+              <td class="ts">${fmtDate(o.created_at)}</td>
+            </tr>`,
           )
           .join("")}
       </tbody>
-    </table>`;
+    </table>
+    <div style="padding: 8px 16px; font-size: 11px; color: var(--muted); font-family: var(--font-mono); border-top: 1px solid var(--line);">
+      показано ${orders.length} · клик по строке — детали
+    </div>`;
 }
 
 function renderRanking(contractors) {
@@ -457,70 +1080,160 @@ function renderRanking(contractors) {
   $("ranking").innerHTML = contractors
     .map(
       (c, i) => `
-      <div style="display:flex; align-items:center; gap:8px; margin-bottom: 8px;">
-        <div style="width: 24px; color: var(--muted); text-align: right;">${i + 1}.</div>
-        <div style="flex: 1; font-size: 13px;">${c.name}</div>
-        <div style="font-weight: 600; color: var(--green); width: 50px; text-align: right;">${c.rating_score.toFixed(1)}</div>
-      </div>
-      <div class="pct-bar"><div style="width:${c.rating_score}%"></div></div>
-    `,
+      <div class="ranking-row top-${i + 1}">
+        <div class="place">${String(i + 1).padStart(2, "0")}</div>
+        <div class="name">${c.name}</div>
+        <div class="score">${(c.rating_score ?? 0).toFixed(1)}</div>
+        <div class="bar-wrap"><div class="bar-fill" style="width:${Math.min(100, c.rating_score)}%"></div></div>
+      </div>`,
     )
     .join("");
 }
 
 function renderActsBreakdown(acts) {
   const counts = {};
-  for (const a of acts) {
-    counts[a.status] = (counts[a.status] || 0) + 1;
-  }
-  const labels = Object.keys(counts);
-  if (!labels.length) {
+  for (const a of acts) counts[a.status] = (counts[a.status] || 0) + 1;
+  const order = ["draft", "assigned", "in_progress", "submitted", "auto_confirmed", "confirmed", "rejected"];
+  const tiles = order.filter((s) => counts[s]);
+  if (!tiles.length) {
     $("acts-breakdown").innerHTML = `<div class="empty" style="grid-column: 1/-1">Нет актов</div>`;
     return;
   }
-  $("acts-breakdown").innerHTML = labels
-    .map(
-      (s) => `
-      <div class="card">
-        <h2>${s.replace(/_/g, " ")}</h2>
-        <div class="kpi">${counts[s]}</div>
-      </div>`,
-    )
+  $("acts-breakdown").innerHTML = tiles
+    .map((s) => {
+      const m = STATUS_META[s] || { bar: "gray", label: s };
+      return `
+      <div class="act-tile">
+        <div class="name"><span class="swatch" style="background: var(--${m.bar === 'gray' ? 'dim' : m.bar})"></span>${m.label}</div>
+        <div class="num">${counts[s]}</div>
+      </div>`;
+    })
     .join("");
 }
 
-$("login-btn").addEventListener("click", login);
-$("logout-btn").addEventListener("click", logout);
-$("password").addEventListener("keypress", (e) => {
-  if (e.key === "Enter") login();
-});
+function renderReviewPanel(acts) {
+  const me = window._currentUser;
+  const panel = $("review-panel");
+  if (!me || !REVIEW_ROLES.has(me.role)) {
+    panel.style.display = "none";
+    return;
+  }
+  panel.style.display = "block";
+  const pending = acts.filter((a) => ["submitted", "delayed_verification"].includes(a.status));
+  $("review-count").textContent = pending.length;
+  if (!pending.length) {
+    $("review-list").innerHTML = `<div class="empty"><div class="icon">✓</div>Очередь пуста — все акты разобраны</div>`;
+    return;
+  }
+  $("review-list").innerHTML = pending
+    .map((a) => {
+      const score = a.auto_check_score;
+      const klass = score == null ? "" : score >= 0.7 ? "is-good" : "is-bad";
+      return `
+      <div class="review-item ${klass}" data-aid="${a.id}">
+        <div class="stripe"></div>
+        <div>
+          <div class="head">
+            <span class="num">${a.work_order_id.slice(0, 8).toUpperCase()}</span>
+            ${statusCell(a.status)}
+            <span class="ago">· ${fmtDate(a.created_at)}</span>
+          </div>
+          <div class="meta">
+            акт <code>${a.id.slice(0, 8).toUpperCase()}</code>
+            ${a.actual_latitude ? ` · 📍 ${parseFloat(a.actual_latitude).toFixed(4)}, ${parseFloat(a.actual_longitude).toFixed(4)}` : ""}
+            ${a.auto_check_passed === true ? ` · <span style="color:var(--ok)">auto-проверка пройдена</span>` : ""}
+            ${a.auto_check_passed === false ? ` · <span style="color:var(--bad)">auto-проверка: дефекты</span>` : ""}
+          </div>
+        </div>
+        <div class="score">${score == null ? "—" : (score * 100).toFixed(0)}</div>
+        <input class="comment" data-cmt placeholder="Комментарий мастера (необязательно)" />
+        <button class="btn btn-ghost btn-sm" data-act="reject" data-aid="${a.id}">✗ Отклонить</button>
+        <button class="btn btn-success btn-sm" data-act="confirm" data-aid="${a.id}">✓ Подтвердить</button>
+      </div>`;
+    })
+    .join("");
+}
 
-// Auto-login if token exists
-if (localStorage.getItem(TOKEN_KEY)) {
-  showApp();
-} else {
-  showLogin();
+// ===========================================================================
+// Actions
+// ===========================================================================
+async function reviewAct(actId, decision, comment) {
+  try {
+    await api(`/acts/${actId}/review`, {
+      method: "POST",
+      body: JSON.stringify({ decision, comment: comment || null }),
+    });
+    toast(`Акт ${decision === "confirm" ? "подтверждён ✓" : "отклонён ✗"}`);
+    loadDashboard();
+  } catch (e) {
+    toast(e.message, true);
+  }
+}
+
+async function openOrderDetail(orderId) {
+  $("detail-title").textContent = "Загрузка…";
+  $("detail-body").innerHTML = `<div class="empty"><span class="spin"></span> Загружаем…</div>`;
+  $("detail-modal").classList.add("open");
+  try {
+    const [order, acts] = await Promise.all([
+      api(`/orders/${orderId}`),
+      api(`/acts?work_order_id=${orderId}&limit=50`).catch(() => []),
+    ]);
+    $("detail-title").textContent = `Наряд ${order.number}`;
+    $("detail-body").innerHTML = `
+      <dl class="kv-grid">
+        <dt>Номер</dt><dd><strong>${order.number}</strong></dd>
+        <dt>Статус</dt><dd>${statusCell(order.status)}</dd>
+        <dt>Объект</dt><dd>${order.object_id}</dd>
+        <dt>Подрядчик</dt><dd>${order.contractor_id ?? "—"}</dd>
+        <dt>Плановое начало</dt><dd>${fmtDate(order.planned_start_at)}</dd>
+        <dt>Плановое окончание</dt><dd>${fmtDate(order.planned_end_at)}</dd>
+        <dt>Факт. начало</dt><dd>${fmtDate(order.actual_start_at)}</dd>
+        <dt>Факт. окончание</dt><dd>${fmtDate(order.actual_end_at)}</dd>
+        <dt>План. стоимость</dt><dd>${order.planned_cost ?? "—"} ₽</dd>
+        <dt>Описание</dt><dd style="font-family:var(--font-sans)">${order.description || "—"}</dd>
+        <dt>Создан</dt><dd>${fmtDate(order.created_at)}</dd>
+      </dl>
+      <h3 style="margin: 24px 0 10px; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);">
+        Связанные акты · ${acts.length}
+      </h3>
+      ${
+        acts.length
+          ? `<table class="orders">
+              <thead><tr><th>ID</th><th>Статус</th><th>Score</th><th>Создан</th></tr></thead>
+              <tbody>
+                ${acts
+                  .map(
+                    (a) => `<tr>
+                      <td class="num">${a.id.slice(0, 8).toUpperCase()}</td>
+                      <td>${statusCell(a.status)}</td>
+                      <td class="num">${a.auto_check_score == null ? "—" : (a.auto_check_score * 100).toFixed(0) + "%"}</td>
+                      <td class="ts">${fmtDate(a.created_at)}</td>
+                    </tr>`,
+                  )
+                  .join("")}
+              </tbody>
+            </table>`
+          : `<div class="empty">Актов ещё нет</div>`
+      }
+    `;
+  } catch (e) {
+    $("detail-body").innerHTML = `<div class="empty">Ошибка: ${e.message}</div>`;
+  }
 }
 
 // ===========================================================================
 // Create order modal
 // ===========================================================================
-const ALLOWED_CREATE_ROLES = new Set(["admin", "manager"]);
+const workTypesCache = [];
+const objectsCache = [];
+const contractorsCache = [];
 
 function toLocalInputValue(d) {
-  // datetime-local expects "YYYY-MM-DDTHH:MM"
-  const pad = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }
-
-function toIsoFromLocal(v) {
-  // local datetime → ISO с зоной (трактуем как локальное время браузера)
-  return new Date(v).toISOString();
-}
-
-let workTypesCache = [];
-let objectsCache = [];
-let contractorsCache = [];
+function toIsoFromLocal(v) { return new Date(v).toISOString(); }
 
 async function loadOrderFormData() {
   const [wts, objs, contrs] = await Promise.all([
@@ -528,24 +1241,18 @@ async function loadOrderFormData() {
     api("/objects?limit=500"),
     api("/contractors?limit=500"),
   ]);
-  workTypesCache = wts;
-  // Только скважины (kind == "well")
-  objectsCache = objs.filter((o) => o.kind === "well");
-  contractorsCache = contrs.filter((c) => c.is_active !== false);
+  workTypesCache.length = 0; objectsCache.length = 0; contractorsCache.length = 0;
+  workTypesCache.push(...wts);
+  objectsCache.push(...objs.filter((o) => o.kind === "well"));
+  contractorsCache.push(...contrs.filter((c) => c.is_active !== false));
 
-  const wtSel = $("of-worktype");
-  wtSel.innerHTML =
+  $("of-worktype").innerHTML =
     `<option value="">— выберите —</option>` +
-    workTypesCache
-      .map((w) => `<option value="${w.id}">${w.code} — ${w.name}</option>`)
-      .join("");
+    workTypesCache.map((w) => `<option value="${w.id}">${w.code} · ${w.name}</option>`).join("");
 
-  const objSel = $("of-object");
-  objSel.innerHTML =
+  $("of-object").innerHTML =
     `<option value="">— выберите —</option>` +
-    objectsCache
-      .map((o) => `<option value="${o.id}">${o.code} — ${o.name}</option>`)
-      .join("");
+    objectsCache.map((o) => `<option value="${o.id}">${o.code} · ${o.name}</option>`).join("");
 
   filterContractorsByWorkType();
 }
@@ -553,27 +1260,16 @@ async function loadOrderFormData() {
 function filterContractorsByWorkType() {
   const wtId = $("of-worktype").value;
   const wt = workTypesCache.find((w) => w.id === wtId);
-  const sel = $("of-contractor");
   const list = wt
-    ? contractorsCache.filter((c) =>
-        (c.specializations || "").split(",").includes(wt.code),
-      )
+    ? contractorsCache.filter((c) => (c.specializations || "").split(",").includes(wt.code))
     : contractorsCache;
-  sel.innerHTML =
+  $("of-contractor").innerHTML =
     `<option value="">— выберите —</option>` +
-    list
-      .map(
-        (c) =>
-          `<option value="${c.id}">${c.name} (★ ${(c.rating_score ?? 0).toFixed(1)})</option>`,
-      )
-      .join("");
-  if (list.length === 0) {
-    sel.innerHTML += `<option value="" disabled>Нет подрядчиков с допуском к этому типу работ</option>`;
-  }
+    list.map((c) => `<option value="${c.id}">${c.name} · ★ ${(c.rating_score ?? 0).toFixed(1)}</option>`).join("") +
+    (list.length === 0 ? `<option value="" disabled>Нет подрядчиков с допуском</option>` : "");
 }
 
 function openOrderModal() {
-  // дефолты: сейчас и +8ч
   const now = new Date();
   const later = new Date(now.getTime() + 8 * 3600 * 1000);
   $("of-start").value = toLocalInputValue(now);
@@ -586,24 +1282,21 @@ function openOrderModal() {
     loadOrderFormData().catch((e) => ($("of-err").textContent = "Ошибка загрузки: " + e.message));
   }
 }
-
-function closeOrderModal() {
-  $("order-modal").classList.remove("open");
-}
+function closeOrderModal() { $("order-modal").classList.remove("open"); }
 
 function toast(msg, isErr = false) {
   const t = $("toast");
   t.textContent = msg;
   t.classList.toggle("err", isErr);
   t.style.display = "block";
-  setTimeout(() => (t.style.display = "none"), 3500);
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => (t.style.display = "none"), 3500);
 }
 
 async function submitOrder(e) {
   e.preventDefault();
   $("of-err").textContent = "";
   $("of-submit").disabled = true;
-
   const body = {
     object_id: $("of-object").value,
     work_type_id: $("of-worktype").value,
@@ -613,7 +1306,6 @@ async function submitOrder(e) {
     planned_cost: Number($("of-cost").value) || 0,
     description: $("of-desc").value || null,
   };
-
   try {
     const created = await api("/orders/", { method: "POST", body: JSON.stringify(body) });
     closeOrderModal();
@@ -625,29 +1317,69 @@ async function submitOrder(e) {
   }
 }
 
-async function initRoleBasedUi() {
-  try {
-    const me = await api("/auth/me");
-    if (ALLOWED_CREATE_ROLES.has(me.role)) {
-      $("new-order-btn").style.display = "inline-block";
-      $("new-order-btn").addEventListener("click", openOrderModal);
-    }
-  } catch {}
+// ===========================================================================
+// Auto-refresh + counters in chips
+// ===========================================================================
+function updateRefreshLabel() {
+  const el = $("last-refresh");
+  if (el && _lastRefreshAt) el.textContent = `обновлено ${fmtRelative(_lastRefreshAt)}`;
 }
 
+function setupAutoRefresh() {
+  if (_refreshTimer) clearInterval(_refreshTimer);
+  _refreshTimer = setInterval(() => {
+    if (!$("auto-refresh")?.checked) return;
+    if ($("login")?.style.display !== "none") return;
+    if (document.querySelector(".modal-bg.open")) return;
+    loadDashboard().catch(() => {});
+    updateRefreshLabel();
+  }, 30_000);
+  setInterval(updateRefreshLabel, 5_000);
+}
+
+// ===========================================================================
+// Init
+// ===========================================================================
+$("login-btn").addEventListener("click", login);
+$("logout-btn").addEventListener("click", logout);
+$("password").addEventListener("keypress", (e) => { if (e.key === "Enter") login(); });
 $("of-worktype").addEventListener("change", filterContractorsByWorkType);
 $("of-cancel").addEventListener("click", closeOrderModal);
 $("order-form").addEventListener("submit", submitOrder);
-$("order-modal").addEventListener("click", (e) => {
-  if (e.target === $("order-modal")) closeOrderModal();
+$("detail-close").addEventListener("click", () => $("detail-modal").classList.remove("open"));
+$("order-modal").addEventListener("click", (e) => { if (e.target.id === "order-modal") closeOrderModal(); });
+$("detail-modal").addEventListener("click", (e) => { if (e.target.id === "detail-modal") $("detail-modal").classList.remove("open"); });
+
+document.addEventListener("click", (e) => {
+  const tr = e.target.closest("tr[data-oid]");
+  if (tr) openOrderDetail(tr.dataset.oid);
+
+  const btn = e.target.closest("button[data-act]");
+  if (btn) {
+    const item = btn.closest(".review-item");
+    reviewAct(btn.dataset.aid, btn.dataset.act, item?.querySelector("[data-cmt]")?.value || "");
+  }
+  const chip = e.target.closest("#status-chips .chip");
+  if (chip) {
+    document.querySelectorAll("#status-chips .chip").forEach((c) => c.classList.remove("active"));
+    chip.classList.add("active");
+    _orderFilter = chip.dataset.status || "";
+    applyOrderFilter();
+  }
 });
 
-// Хук: инициализируем роли при показе приложения
 const _origShowApp = showApp;
 showApp = function () {
   _origShowApp();
-  initRoleBasedUi();
+  if (ALLOWED_CREATE_ROLES.has(window._currentUser?.role)) {
+    $("new-order-btn").style.display = "inline-flex";
+    $("new-order-btn").addEventListener("click", openOrderModal);
+  }
+  setupAutoRefresh();
 };
 
+if (localStorage.getItem(TOKEN_KEY)) showApp();
+else showLogin();
+</script>
 </body>
 </html>

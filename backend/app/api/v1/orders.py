@@ -47,6 +47,20 @@ async def list_orders(
     return rows
 
 
+@router.get("/{order_id}", response_model=WorkOrderOut)
+async def get_order(
+    order_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
+):
+    wo = await session.get(WorkOrder, order_id)
+    if not wo:
+        raise HTTPException(404, "Наряд не найден")
+    if user.role == UserRole.CONTRACTOR and user.contractor_id and wo.contractor_id != user.contractor_id:
+        raise HTTPException(403, "Чужой наряд")
+    return wo
+
+
 @router.post("/", response_model=WorkOrderOut, status_code=201)
 async def create_order(
     body: WorkOrderCreate,
