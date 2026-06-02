@@ -1,0 +1,84 @@
+"""Work orders (наряды-заказы)."""
+from __future__ import annotations
+
+from datetime import datetime
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.api.deps import get_current_user, require_roles
+from app.db.session import get_session
+from app.models.order import WorkOrder, WorkOrderStatus
+from app.models.user import User, UserRole
+from app.schemas.order import WorkOrderCreate, WorkOrderOut, WorkOrderUpdate
+
+router = APIRouter(prefix="/orders", tags=["orders"])
+
+
+def _gen_number() -> str:
+    return f"WO-{datetime.utcnow().strftime('%Y%m%d')}-{UUID(int=0).hex[:6].upper()}"
+
+
+@router.get("/", response_model=list[WorkOrderOut])
+async def list_orders(
+    status: WorkOrderStatus | None = None,
+    contractor_id: UUID | None = None,
+    object_id: UUID | None = None,
+    limit: int = 100,
+    offset: int = 0,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
+):
+    q = select(WorkOrder).order_by(WorkOrder.created_at.desc()).limit(limit).offset(offset)
+    if status:
+        q = q.where(WorkOrder.status == status)
+    if contractor_id:
+        q = q.where(WorkOrder.contractor_id == contractor_id)
+    if object_id:
+        q = q.where(WorkOrder.object_id == object_id)
+    if user.role == UserRole.CONTRACTOR and user.contractor_id:
+        q = q.where(WorkOrder.contractor_id == user.contractor_id)
+    rows = (await session.scalars(q)).all()
+    return rows
+
+
+@router.post("/", response_model=WorkOrderOut, status_code=201)
+async def create_order(
+    body: WorkOrderCreate,
+    session: AsyncSession = Depends(get_session),
+    _: User = Depends(require_roles(UserRole.MANAGER, UserRole.ADMIN)),
+):
+    wo = WorkOrder(
+        number=_gen_number(),
+        object_id=body.object_id,
+        work_type_id=body.work_type_id,
+        contractor_id=body.contractor_id,
+        planned_start_at=body.planned_start_at,
+        planned_end_at=body.planned_end_at,
+        planned_cost=body.planned_cost,
+        description=body.description,
+        status=WorkOrderStatus.ASSIGNED if body.contractor_id else WorkOrderStatus.DRAFT,
+    )
+    session.add(wo)
+    await session.commit()
+    await session.refresh(wo)
+    return wo
+
+
+@router.patch("/{order_id}", response_model=WorkOrderOut)
+async def update_order(
+    order_id: UUID,
+    body: WorkOrderUpdate,
+    session: AsyncSession = Depends(get_session),
+    _: User = Depends(require_roles(UserRole.MANAGER, UserRole.ADMIN)),
+):
+    wo = await session.get(WorkOrder, order_id)
+    if not wo:
+        raise HTTPException(404, "Наряд-заказ не найден")
+    for k, v in body.model_dump(exclude_unset=True).items():
+        setattr(wo, k, v)
+    await session.commit()
+    await session.refresh(wo)
+    return wo
