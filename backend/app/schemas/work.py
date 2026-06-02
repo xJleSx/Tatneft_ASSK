@@ -1,4 +1,5 @@
 """Схемы типов работ и чек-листов."""
+
 from __future__ import annotations
 
 from datetime import datetime

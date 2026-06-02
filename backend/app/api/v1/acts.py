@@ -1,13 +1,14 @@
 """Acts: цифровые акты выполненных работ."""
+
 from __future__ import annotations
 
 import hashlib
 import json
 import os
 import secrets as _secrets
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -15,14 +16,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, require_roles
-from app.core.config import settings
 from app.db.session import get_session
 from app.integrations.asutp.factory import get_asutp_adapter
 from app.models.act import Act, ActStatus, ChecklistResponse
 from app.models.equipment import Equipment
-from app.models.photo import Photo, PhotoKind
-from app.models.user import UserRole
-from app.models.object import Object
 from app.models.order import WorkOrder, WorkOrderStatus
 from app.models.photo import Photo, PhotoKind
 from app.models.user import User, UserRole
@@ -62,13 +59,17 @@ async def get_act_detail(
     if user.role == UserRole.CONTRACTOR and act.contractor_user_id != user.id:
         raise HTTPException(403, "Чужой акт")
 
-    responses = (await session.scalars(
-        select(ChecklistResponse).where(ChecklistResponse.act_id == act_id)
-    )).all()
-    photos = (await session.scalars(
-        select(Photo).where(Photo.act_id == act_id).order_by(Photo.created_at)
-    )).all()
-    wo = await session.get(__import__("app.models.order", fromlist=["WorkOrder"]).WorkOrder, act.work_order_id)
+    responses = (
+        await session.scalars(select(ChecklistResponse).where(ChecklistResponse.act_id == act_id))
+    ).all()
+    photos = (
+        await session.scalars(
+            select(Photo).where(Photo.act_id == act_id).order_by(Photo.created_at)
+        )
+    ).all()
+    wo = await session.get(
+        __import__("app.models.order", fromlist=["WorkOrder"]).WorkOrder, act.work_order_id
+    )
 
     return {
         "id": str(act.id),
@@ -113,13 +114,17 @@ async def get_act_detail(
             }
             for p in photos
         ],
-        "work_order": {
-            "id": str(wo.id),
-            "number": wo.number,
-            "status": wo.status.value,
-            "object_id": str(wo.object_id),
-            "contractor_id": str(wo.contractor_id) if wo.contractor_id else None,
-        } if wo else None,
+        "work_order": (
+            {
+                "id": str(wo.id),
+                "number": wo.number,
+                "status": wo.status.value,
+                "object_id": str(wo.object_id),
+                "contractor_id": str(wo.contractor_id) if wo.contractor_id else None,
+            }
+            if wo
+            else None
+        ),
     }
 
 
@@ -138,7 +143,7 @@ async def create_draft_act(
         status=ActStatus.DRAFT,
         actual_latitude=body.actual_latitude,
         actual_longitude=body.actual_longitude,
-        actual_at=body.actual_at or datetime.now(timezone.utc),
+        actual_at=body.actual_at or datetime.now(UTC),
     )
     session.add(act)
     await session.flush()
@@ -154,7 +159,7 @@ async def create_draft_act(
                 object_key=key,
                 content_type="image/jpeg",
                 size_bytes=0,
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
             )
         )
 
@@ -191,9 +196,7 @@ async def submit_act(
     # 3) Снимок телеметрии equipment объекта
     wo = await session.get(WorkOrder, act.work_order_id)
     equipment_list = (
-        await session.scalars(
-            select(Equipment).where(Equipment.object_id == wo.object_id)
-        )
+        await session.scalars(select(Equipment).where(Equipment.object_id == wo.object_id))
     ).all()
 
     adapter = get_asutp_adapter()
@@ -246,8 +249,10 @@ PHOTOS_DIR.mkdir(parents=True, exist_ok=True)
 def _exif_gps_and_dt(raw: bytes) -> tuple[dict | None, datetime | None]:
     """Извлечь GPS и время съёмки из EXIF JPEG. Возвращает (gps_dict, taken_at)."""
     try:
-        from PIL import Image, ExifTags
         import io
+
+        from PIL import Image
+
         img = Image.open(io.BytesIO(raw))
         exif = img._getexif() or {}
     except Exception:
@@ -261,7 +266,7 @@ def _exif_gps_and_dt(raw: bytes) -> tuple[dict | None, datetime | None]:
     dt_str = exif.get(36867) or exif.get(306)  # DateTimeOriginal, DateTime
     if dt_str and isinstance(dt_str, str):
         try:
-            taken_at = datetime.strptime(dt_str, "%Y:%m:%d %H:%M:%S").replace(tzinfo=timezone.utc)
+            taken_at = datetime.strptime(dt_str, "%Y:%m:%d %H:%M:%S").replace(tzinfo=UTC)
         except ValueError:
             pass
 
@@ -341,8 +346,10 @@ async def upload_photo(
         latitude=gps["lat"] if gps else None,
         longitude=gps["lon"] if gps else None,
         sha256=sha,
-        exif_json=json.dumps({"source_filename": file.filename, "has_exif": gps is not None}, ensure_ascii=False),
-        created_at=datetime.now(timezone.utc),
+        exif_json=json.dumps(
+            {"source_filename": file.filename, "has_exif": gps is not None}, ensure_ascii=False
+        ),
+        created_at=datetime.now(UTC),
     )
     session.add(photo)
     await session.commit()
@@ -380,7 +387,9 @@ async def review_act(
     act_id: UUID,
     body: ActReview,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_roles(UserRole.MASTER, UserRole.TECHNOLOGIST, UserRole.MANAGER, UserRole.ADMIN)),
+    user: User = Depends(
+        require_roles(UserRole.MASTER, UserRole.TECHNOLOGIST, UserRole.MANAGER, UserRole.ADMIN)
+    ),
 ):
     act = await session.get(Act, act_id)
     if not act:
@@ -388,7 +397,7 @@ async def review_act(
 
     wo = await session.get(WorkOrder, act.work_order_id)
     act.confirmed_by_user_id = user.id
-    act.confirmed_at = datetime.now(timezone.utc)
+    act.confirmed_at = datetime.now(UTC)
     act.reviewer_comment = body.comment
 
     if body.decision == "confirm":

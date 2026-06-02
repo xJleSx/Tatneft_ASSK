@@ -1,4 +1,5 @@
 """Зависимости FastAPI: текущий пользователь, сессия, RBAC."""
+
 from __future__ import annotations
 
 from typing import Annotated
@@ -30,15 +31,11 @@ async def get_current_user(
         ) from e
 
     if payload.get("type") != "access":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Не access token"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Не access token")
 
     user_id = payload.get("sub")
     if not user_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Нет sub в токене"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Нет sub в токене")
 
     user = await session.scalar(select(User).where(User.id == UUID(user_id)))
     if not user or not user.is_active:

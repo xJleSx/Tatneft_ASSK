@@ -1,4 +1,5 @@
 """Структурное логирование."""
+
 import logging
 import sys
 from typing import Any

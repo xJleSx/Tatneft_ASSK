@@ -7,6 +7,7 @@
 
 Подробное обоснование см. docs/analogs.md.
 """
+
 from __future__ import annotations
 
 import abc
@@ -19,9 +20,7 @@ class AsutpAdapter(abc.ABC):
     """Получить текущие и исторические параметры оборудования."""
 
     @abc.abstractmethod
-    async def get_snapshot(
-        self, equipment_id: UUID, at: datetime | None = None
-    ) -> dict[str, Any]:
+    async def get_snapshot(self, equipment_id: UUID, at: datetime | None = None) -> dict[str, Any]:
         """Снимок параметров equipment на момент времени (или сейчас)."""
 
     @abc.abstractmethod

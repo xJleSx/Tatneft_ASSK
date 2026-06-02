@@ -4,16 +4,15 @@ Revision ID: c4d2e1f8b901
 Revises: bd6564c8bd40
 Create Date: 2026-06-02 13:00:00.000000
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
-
+from alembic import op
 
 revision: str = 'c4d2e1f8b901'
-down_revision: Union[str, None] = 'bd6564c8bd40'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = 'bd6564c8bd40'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 work_order_priority = sa.Enum(

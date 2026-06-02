@@ -1,4 +1,5 @@
 """AuditLog: журнал аудита (кто, что, когда)."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -22,9 +23,7 @@ class AuditLog(UUIDPKMixin, Base):
     )
     action: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     entity_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
-    entity_id: Mapped[UUID | None] = mapped_column(
-        PGUUID(as_uuid=True), nullable=True, index=True
-    )
+    entity_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True, index=True)
 
     details: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     ip_address: Mapped[str | None] = mapped_column(String(64), nullable=True)

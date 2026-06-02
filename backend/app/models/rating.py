@@ -1,4 +1,5 @@
 """ContractorRating: агрегированный рейтинг подрядчика за период."""
+
 from __future__ import annotations
 
 import enum

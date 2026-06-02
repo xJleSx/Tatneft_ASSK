@@ -1,11 +1,12 @@
 """Схемы производственных объектов и оборудования."""
+
 from __future__ import annotations
 
 from datetime import date, datetime
 from decimal import Decimal
 from uuid import UUID
 
-from pydantic import ConfigDict, Field
+from pydantic import ConfigDict
 
 from app.models.equipment import EquipmentType
 from app.models.object import ObjectKind

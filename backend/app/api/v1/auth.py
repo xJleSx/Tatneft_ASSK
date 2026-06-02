@@ -1,4 +1,5 @@
 """Auth: логин, рефреш, /me, /seed (dev only)."""
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -6,8 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.db.session import get_session
-from app.models.user import User
 from app.mocks.generators.seed import run_all_seeds
+from app.models.user import User
 from app.schemas.user import LoginRequest, RefreshRequest, TokenResponse, UserOut
 from app.services.auth import authenticate, issue_tokens, refresh_tokens
 
@@ -15,9 +16,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(
-    body: LoginRequest, session: AsyncSession = Depends(get_session)
-) -> TokenResponse:
+async def login(body: LoginRequest, session: AsyncSession = Depends(get_session)) -> TokenResponse:
     user = await authenticate(session, body.email, body.password)
     return issue_tokens(user)
 

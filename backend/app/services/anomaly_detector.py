@@ -9,12 +9,13 @@
 Тяжёлой аналитики нет — это намеренно: прототип должен объясняться
 «на пальцах» в презентации.
 """
+
 from __future__ import annotations
 
 import statistics
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
-from typing import Iterable
+from collections.abc import Iterable
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import select
@@ -27,13 +28,13 @@ from app.models.telemetry import TelemetryReading
 log = get_logger(__name__)
 
 CURRENT_WINDOW_HOURS = 6
-BASELINE_WINDOW_HOURS = 24          # baseline = 24-30ч назад
-MIN_BASELINE_POINTS = 8             # минимум точек, чтобы не флапать на пустоте
-DATA_GAP_HOURS = 4                  # «нет данных» — последняя точка старше
+BASELINE_WINDOW_HOURS = 24  # baseline = 24-30ч назад
+MIN_BASELINE_POINTS = 8  # минимум точек, чтобы не флапать на пустоте
+DATA_GAP_HOURS = 4  # «нет данных» — последняя точка старше
 
 # Пороги — консервативные, чтобы не плодить ложные
-DEBIT_DROP_RATIO = 0.80             # current < 80% baseline → warning
-DEBIT_DROP_RATIO_CRITICAL = 0.60    # < 60% — critical
+DEBIT_DROP_RATIO = 0.80  # current < 80% baseline → warning
+DEBIT_DROP_RATIO_CRITICAL = 0.60  # < 60% — critical
 
 PRESSURE_HIGH_RATIO = 1.30
 PRESSURE_LOW_RATIO = 0.70
@@ -228,10 +229,7 @@ def _detect_for_equipment(
                 actual_code = "debit_drop"
             else:
                 continue
-            desc = (
-                f"Дебит {param} = {cur:.1f} {unit} "
-                f"({ratio*100:.0f}% от базовых {base:.1f})"
-            )
+            desc = f"Дебит {param} = {cur:.1f} {unit} " f"({ratio*100:.0f}% от базовых {base:.1f})"
         elif code == "motor_overload":
             if ratio < MOTOR_CURRENT_HIGH_RATIO:
                 continue
@@ -283,7 +281,7 @@ def _detect_for_equipment(
 
 async def detect_anomalies(session: AsyncSession) -> list[Anomaly]:
     """Compute-on-the-fly: за последние (CURRENT+BASELINE) часов на каждую установку."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     horizon_from = now - timedelta(hours=CURRENT_WINDOW_HOURS + BASELINE_WINDOW_HOURS)
 
     equipment_list = (await session.scalars(select(Equipment))).all()
@@ -311,7 +309,5 @@ async def detect_anomalies(session: AsyncSession) -> list[Anomaly]:
         anomalies.extend(_detect_for_equipment(eq, by_eq.get(eq.id, []), now))
 
     # Сортируем по severity (critical first) и времени
-    anomalies.sort(
-        key=lambda a: (-SEVERITY_RANK.get(a.severity, 0), a.detected_at, a.equipment_id)
-    )
+    anomalies.sort(key=lambda a: (-SEVERITY_RANK.get(a.severity, 0), a.detected_at, a.equipment_id))
     return anomalies

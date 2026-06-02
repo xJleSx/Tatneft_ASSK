@@ -1,4 +1,5 @@
 """Work types & checklist templates."""
+
 from __future__ import annotations
 
 from uuid import UUID
@@ -27,7 +28,9 @@ async def list_work_types(
             "code": w.code,
             "name": w.name,
             "category": w.category.value,
-            "planned_duration_hours": float(w.planned_duration_hours) if w.planned_duration_hours else None,
+            "planned_duration_hours": (
+                float(w.planned_duration_hours) if w.planned_duration_hours else None
+            ),
             "applies_to_equipment_type": w.applies_to_equipment_type,
         }
         for w in rows
@@ -50,6 +53,7 @@ async def get_template(
         return {"steps": []}
     # Явная загрузка шагов (lazy="noload" на relationship)
     from app.models.work import ChecklistStep
+
     steps_rows = (
         await session.scalars(
             select(ChecklistStep)

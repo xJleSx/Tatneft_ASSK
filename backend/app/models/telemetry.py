@@ -3,6 +3,7 @@
 Хранится в TimescaleDB hypertable (см. миграцию).
 Параметры зависят от типа оборудования (УШГН/УЭЦН) — кладём в JSONB.
 """
+
 from __future__ import annotations
 
 import enum
@@ -17,9 +18,9 @@ from app.db.base import Base, UUIDPKMixin
 
 
 class TelemetryKind(str, enum.Enum):
-    SCRAPE = "scrape"        # периодический опрос
-    EVENT = "event"          # событие (аларм, отключение)
-    SNAPSHOT = "snapshot"    # снимок по запросу
+    SCRAPE = "scrape"  # периодический опрос
+    EVENT = "event"  # событие (аларм, отключение)
+    SNAPSHOT = "snapshot"  # снимок по запросу
 
 
 class TelemetryReading(UUIDPKMixin, Base):

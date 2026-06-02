@@ -4,6 +4,7 @@
 draft → assigned → in_progress → submitted (акт подан) → confirmed | rejected
                                        → delayed_verification → verified | issue
 """
+
 from __future__ import annotations
 
 import enum

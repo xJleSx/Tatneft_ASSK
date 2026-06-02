@@ -1,11 +1,11 @@
 """Сервис аутентификации."""
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Annotated
+from datetime import UTC, datetime
 from uuid import UUID
 
-from fastapi import Depends, HTTPException, status
+from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,7 +17,6 @@ from app.core.security import (
     hash_password,
     verify_password,
 )
-from app.db.session import get_session
 from app.models.user import User, UserRole
 from app.schemas.user import TokenResponse
 
@@ -30,10 +29,8 @@ async def authenticate(session: AsyncSession, email: str, password: str) -> User
             detail="Неверный email или пароль",
         )
     if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Пользователь отключён"
-        )
-    user.last_login_at = datetime.now(timezone.utc)
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Пользователь отключён")
+    user.last_login_at = datetime.now(UTC)
     await session.commit()
     return user
 
@@ -53,18 +50,12 @@ async def refresh_tokens(session: AsyncSession, refresh_token: str) -> TokenResp
     try:
         payload = decode_token(refresh_token)
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e)
-        ) from e
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e)) from e
 
     if payload.get("type") != "refresh":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Не refresh token"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Не refresh token")
 
-    user = await session.scalar(
-        select(User).where(User.id == UUID(payload["sub"]))
-    )
+    user = await session.scalar(select(User).where(User.id == UUID(payload["sub"])))
     if not user or not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Пользователь не найден"

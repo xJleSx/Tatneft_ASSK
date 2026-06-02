@@ -1,5 +1,4 @@
 """Базовые тесты: geo + auth + check."""
-import pytest
 
 from app.services.geo import check_geo, haversine_m
 

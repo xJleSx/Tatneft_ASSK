@@ -8,6 +8,7 @@
 
 Итог: passed (bool) + score (0..1) + details (dict для UI).
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -19,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.logging import get_logger
-from app.models.act import Act, ActStatus, ChecklistResponse
+from app.models.act import Act, ChecklistResponse
 from app.models.photo import Photo, PhotoKind
 from app.models.work import ChecklistStep, StepDataType
 from app.services.geo import check_geo
@@ -50,9 +51,7 @@ async def auto_check_act(session: AsyncSession, act: Act, work_order=None) -> Au
     ).all()
 
     if not steps:
-        return AutoCheckResult(
-            passed=False, score=0.0, failed_rules=["checklist_empty"]
-        )
+        return AutoCheckResult(passed=False, score=0.0, failed_rules=["checklist_empty"])
 
     required_steps = [s for s in steps if s.is_required]
     if not required_steps:
@@ -79,7 +78,11 @@ async def auto_check_act(session: AsyncSession, act: Act, work_order=None) -> Au
 
         ok = resp.passed
         # Доп. проверка для numeric с нормой
-        if step.data_type == StepDataType.NUMERIC and resp.value_numeric is not None and step.norm_json:
+        if (
+            step.data_type == StepDataType.NUMERIC
+            and resp.value_numeric is not None
+            and step.norm_json
+        ):
             norm = step.norm_json
             nominal = norm.get("nominal")
             tol = norm.get("tolerance")
@@ -110,16 +113,20 @@ async def auto_check_act(session: AsyncSession, act: Act, work_order=None) -> Au
 
     # 2) Гео-проверка
     from app.models.object import Object  # локальный импорт чтобы избежать цикла
+
     # work_order может быть передан явно (lazy="noload" на relationship)
     wo = work_order or act.work_order
     if wo is None:
         from app.models.order import WorkOrder
+
         wo = await session.get(WorkOrder, act.work_order_id)
     obj = await session.scalar(select(Object).where(Object.id == wo.object_id))
     if obj and obj.latitude and obj.longitude and act.actual_latitude and act.actual_longitude:
         geo = check_geo(
-            float(obj.latitude), float(obj.longitude),
-            float(act.actual_latitude), float(act.actual_longitude),
+            float(obj.latitude),
+            float(obj.longitude),
+            float(act.actual_latitude),
+            float(act.actual_longitude),
             settings.geo_radius_m,
         )
         if geo is not None:
@@ -131,13 +138,13 @@ async def auto_check_act(session: AsyncSession, act: Act, work_order=None) -> Au
             weights.append((0.25, geo.in_radius, "geo"))
 
     # 3) Фото: должны быть до и после
-    photos = (
-        await session.scalars(select(Photo).where(Photo.act_id == act.id))
-    ).all()
+    photos = (await session.scalars(select(Photo).where(Photo.act_id == act.id))).all()
     has_before = any(p.kind == PhotoKind.BEFORE for p in photos)
     has_after = any(p.kind == PhotoKind.AFTER for p in photos)
     details["photos"] = {
-        "before": has_before, "after": has_after, "total": len(photos),
+        "before": has_before,
+        "after": has_after,
+        "total": len(photos),
     }
     weights.append((0.15, has_before, "photo_before"))
     weights.append((0.15, has_after, "photo_after"))
@@ -147,7 +154,8 @@ async def auto_check_act(session: AsyncSession, act: Act, work_order=None) -> Au
         # Простая эвристика: ключевые параметры equipment изменились
         # (потом заменим на rule per parameter)
         changed = [
-            k for k in act.telemetry_after_json
+            k
+            for k in act.telemetry_after_json
             if act.telemetry_after_json.get(k) != act.telemetry_before_json.get(k)
         ]
         details["telemetry"] = {

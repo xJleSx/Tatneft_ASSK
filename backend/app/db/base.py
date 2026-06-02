@@ -1,4 +1,5 @@
 """SQLAlchemy Base + общие миксины."""
+
 from datetime import datetime
 from uuid import UUID, uuid4
 
@@ -23,9 +24,7 @@ class Base(DeclarativeBase):
 class UUIDPKMixin:
     """UUID primary key."""
 
-    id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), primary_key=True, default=uuid4
-    )
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
 
 
 class TimestampMixin:

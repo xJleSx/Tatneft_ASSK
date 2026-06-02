@@ -1,5 +1,6 @@
 """Безопасность: JWT, хеширование паролей."""
-from datetime import datetime, timedelta, timezone
+
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import bcrypt
@@ -21,7 +22,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 
 def create_access_token(subject: str | int, extra: dict[str, Any] | None = None) -> str:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     payload: dict[str, Any] = {
         "sub": str(subject),
         "iat": int(now.timestamp()),
@@ -34,7 +35,7 @@ def create_access_token(subject: str | int, extra: dict[str, Any] | None = None)
 
 
 def create_refresh_token(subject: str | int) -> str:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     payload = {
         "sub": str(subject),
         "iat": int(now.timestamp()),

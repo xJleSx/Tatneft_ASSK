@@ -1,4 +1,5 @@
 """Гео-утилиты: проверка попадания в радиус объекта."""
+
 from __future__ import annotations
 
 from math import asin, cos, radians, sin, sqrt
@@ -10,9 +11,7 @@ class GeoResult(NamedTuple):
     in_radius: bool
 
 
-def haversine_m(
-    lat1: float, lon1: float, lat2: float, lon2: float
-) -> float:
+def haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Расстояние в метрах между двумя точками (WGS84)."""
     r = 6_371_000.0
     phi1, phi2 = radians(lat1), radians(lat2)

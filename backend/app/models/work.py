@@ -5,6 +5,7 @@
 
 К каждому WorkType привязан ChecklistTemplate с шагами ChecklistStep.
 """
+
 from __future__ import annotations
 
 import enum
@@ -12,11 +13,11 @@ from decimal import Decimal
 from uuid import UUID
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     Enum,
     ForeignKey,
     Integer,
-    JSON,
     Numeric,
     String,
     Text,
@@ -28,19 +29,19 @@ from app.db.base import Base, TimestampMixin, UUIDPKMixin
 
 
 class WorkCategory(str, enum.Enum):
-    WORKOVER = "workover"      # текущий ремонт (ТР)
-    OVERHAUL = "overhaul"      # капитальный ремонт (КР)
-    ROUTINE = "routine"        # ТО, регламентные работы
-    EMERGENCY = "emergency"    # аварийные
+    WORKOVER = "workover"  # текущий ремонт (ТР)
+    OVERHAUL = "overhaul"  # капитальный ремонт (КР)
+    ROUTINE = "routine"  # ТО, регламентные работы
+    EMERGENCY = "emergency"  # аварийные
     INSTALLATION = "installation"  # монтаж/замена
 
 
 class StepDataType(str, enum.Enum):
-    BOOLEAN = "boolean"        # да/нет
-    NUMERIC = "numeric"        # число (с допуском)
-    TEXT = "text"              # свободный комментарий
-    PHOTO = "photo"            # требуется фото
-    CHOICE = "choice"          # выбор из вариантов
+    BOOLEAN = "boolean"  # да/нет
+    NUMERIC = "numeric"  # число (с допуском)
+    TEXT = "text"  # свободный комментарий
+    PHOTO = "photo"  # требуется фото
+    CHOICE = "choice"  # выбор из вариантов
 
 
 class WorkType(UUIDPKMixin, TimestampMixin, Base):
@@ -53,9 +54,7 @@ class WorkType(UUIDPKMixin, TimestampMixin, Base):
     )
 
     # Плановые длительность и трудоёмкость
-    planned_duration_hours: Mapped[Decimal | None] = mapped_column(
-        Numeric(8, 2), nullable=True
-    )
+    planned_duration_hours: Mapped[Decimal | None] = mapped_column(Numeric(8, 2), nullable=True)
 
     # Применимо к какому типу оборудования (если None — для всех)
     applies_to_equipment_type: Mapped[str | None] = mapped_column(String(32), nullable=True)

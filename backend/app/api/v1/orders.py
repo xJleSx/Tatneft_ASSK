@@ -1,8 +1,9 @@
 """Work orders (наряды-заказы)."""
+
 from __future__ import annotations
 
 import secrets
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -56,7 +57,11 @@ async def get_order(
     wo = await session.get(WorkOrder, order_id)
     if not wo:
         raise HTTPException(404, "Наряд не найден")
-    if user.role == UserRole.CONTRACTOR and user.contractor_id and wo.contractor_id != user.contractor_id:
+    if (
+        user.role == UserRole.CONTRACTOR
+        and user.contractor_id
+        and wo.contractor_id != user.contractor_id
+    ):
         raise HTTPException(403, "Чужой наряд")
     return wo
 
@@ -114,12 +119,16 @@ async def start_order(
     wo = await session.get(WorkOrder, order_id)
     if not wo:
         raise HTTPException(404, "Наряд не найден")
-    if user.role == UserRole.CONTRACTOR and user.contractor_id and wo.contractor_id != user.contractor_id:
+    if (
+        user.role == UserRole.CONTRACTOR
+        and user.contractor_id
+        and wo.contractor_id != user.contractor_id
+    ):
         raise HTTPException(403, "Чужой наряд")
     if wo.status not in (WorkOrderStatus.ASSIGNED,):
         raise HTTPException(400, f"Наряд в статусе {wo.status.value}, нельзя взять в работу")
     wo.status = WorkOrderStatus.IN_PROGRESS
-    wo.actual_start_at = datetime.now(timezone.utc)
+    wo.actual_start_at = datetime.now(UTC)
     await session.commit()
     await session.refresh(wo)
     return wo

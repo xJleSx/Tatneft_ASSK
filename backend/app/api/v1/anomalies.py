@@ -1,4 +1,5 @@
 """Anomalies: детектор аномалий телеметрии (compute-on-the-fly, без отдельной таблицы)."""
+
 from __future__ import annotations
 
 from uuid import UUID
@@ -34,9 +35,7 @@ async def list_anomalies(
     object_ids = {a.object_id for a in anomalies if a.object_id}
     name_by_id: dict[UUID, str] = {}
     if object_ids:
-        rows = (
-            await session.scalars(select(Object).where(Object.id.in_(object_ids)))
-        ).all()
+        rows = (await session.scalars(select(Object).where(Object.id.in_(object_ids)))).all()
         name_by_id = {o.id: o.name for o in rows}
 
     items: list[dict] = []

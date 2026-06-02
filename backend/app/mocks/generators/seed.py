@@ -10,13 +10,14 @@
 - Реальные ИНН/КПП валидируются по формату, но не существуют
 - Геолокации — около реальных месторождений Татарстана
 """
+
 from __future__ import annotations
 
 import random
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -69,18 +70,49 @@ WORK_TYPES = [
         "duration": Decimal("72.0"),
         "equipment": None,  # для всех
         "steps": [
-            ("Подготовительные работы", "Допуск, осмотр, ограждение", StepDataType.BOOLEAN, None, None, True),
-            ("Проверка давления в затрубе", "Давление по манометру", StepDataType.NUMERIC,
-             {"nominal": 5.0, "tolerance": 1.0, "unit": "атм"}, "P_buf", True),
-            ("Спуск инструмента", "Глубина спуска", StepDataType.NUMERIC,
-             {"nominal": 1500.0, "tolerance": 50.0, "unit": "м"}, None, True),
+            (
+                "Подготовительные работы",
+                "Допуск, осмотр, ограждение",
+                StepDataType.BOOLEAN,
+                None,
+                None,
+                True,
+            ),
+            (
+                "Проверка давления в затрубе",
+                "Давление по манометру",
+                StepDataType.NUMERIC,
+                {"nominal": 5.0, "tolerance": 1.0, "unit": "атм"},
+                "P_buf",
+                True,
+            ),
+            (
+                "Спуск инструмента",
+                "Глубина спуска",
+                StepDataType.NUMERIC,
+                {"nominal": 1500.0, "tolerance": 50.0, "unit": "м"},
+                None,
+                True,
+            ),
             ("Фото оборудования до работ", None, StepDataType.PHOTO, None, None, True),
-            ("Промывка скважины", "Объём закачки", StepDataType.NUMERIC,
-             {"nominal": 20.0, "tolerance": 5.0, "unit": "м³"}, None, True),
+            (
+                "Промывка скважины",
+                "Объём закачки",
+                StepDataType.NUMERIC,
+                {"nominal": 20.0, "tolerance": 5.0, "unit": "м³"},
+                None,
+                True,
+            ),
             ("Подъём инструмента", None, StepDataType.BOOLEAN, None, None, True),
             ("Фото оборудования после работ", None, StepDataType.PHOTO, None, None, True),
-            ("Замер параметров после ТР", "Дебит жидкости", StepDataType.NUMERIC,
-             {"nominal": 80.0, "tolerance": 15.0, "unit": "м³/сут"}, "Q_liq", True),
+            (
+                "Замер параметров после ТР",
+                "Дебит жидкости",
+                StepDataType.NUMERIC,
+                {"nominal": 80.0, "tolerance": 15.0, "unit": "м³/сут"},
+                "Q_liq",
+                True,
+            ),
             ("Заключение мастера", "Замечания", StepDataType.TEXT, None, None, False),
         ],
     },
@@ -93,13 +125,32 @@ WORK_TYPES = [
         "steps": [
             ("Внешний осмотр станка-качалки", None, StepDataType.BOOLEAN, None, None, True),
             ("Проверка уровня масла в редукторе", None, StepDataType.BOOLEAN, None, None, True),
-            ("Замер нагрузки на полированный шток", "По динамографу", StepDataType.NUMERIC,
-             {"nominal": 50.0, "tolerance": 10.0, "unit": "кН"}, None, True),
-            ("Проверка противовыбросового оборудования", None, StepDataType.BOOLEAN, None, None, True),
+            (
+                "Замер нагрузки на полированный шток",
+                "По динамографу",
+                StepDataType.NUMERIC,
+                {"nominal": 50.0, "tolerance": 10.0, "unit": "кН"},
+                None,
+                True,
+            ),
+            (
+                "Проверка противовыбросового оборудования",
+                None,
+                StepDataType.BOOLEAN,
+                None,
+                None,
+                True,
+            ),
             ("Фото до ТО", None, StepDataType.PHOTO, None, None, True),
             ("Фото после ТО", None, StepDataType.PHOTO, None, None, True),
-            ("Дебит жидкости после ТО", None, StepDataType.NUMERIC,
-             {"nominal": 30.0, "tolerance": 8.0, "unit": "м³/сут"}, "Q_liq", True),
+            (
+                "Дебит жидкости после ТО",
+                None,
+                StepDataType.NUMERIC,
+                {"nominal": 30.0, "tolerance": 8.0, "unit": "м³/сут"},
+                "Q_liq",
+                True,
+            ),
         ],
     },
     {
@@ -112,13 +163,31 @@ WORK_TYPES = [
             ("Подъём старого УЭЦН", None, StepDataType.BOOLEAN, None, None, True),
             ("Дефектовка старого оборудования", "Заключение", StepDataType.TEXT, None, None, True),
             ("Монтаж нового УЭЦН", None, StepDataType.BOOLEAN, None, None, True),
-            ("Проверка тока после запуска", None, StepDataType.NUMERIC,
-             {"nominal": 60.0, "tolerance": 8.0, "unit": "А"}, "I", True),
-            ("Проверка частоты", None, StepDataType.NUMERIC,
-             {"nominal": 50.0, "tolerance": 2.0, "unit": "Гц"}, "V_freq", True),
+            (
+                "Проверка тока после запуска",
+                None,
+                StepDataType.NUMERIC,
+                {"nominal": 60.0, "tolerance": 8.0, "unit": "А"},
+                "I",
+                True,
+            ),
+            (
+                "Проверка частоты",
+                None,
+                StepDataType.NUMERIC,
+                {"nominal": 50.0, "tolerance": 2.0, "unit": "Гц"},
+                "V_freq",
+                True,
+            ),
             ("Фото нового УЭЦН", None, StepDataType.PHOTO, None, None, True),
-            ("Дебит после запуска", None, StepDataType.NUMERIC,
-             {"nominal": 120.0, "tolerance": 25.0, "unit": "м³/сут"}, "Q_liq", True),
+            (
+                "Дебит после запуска",
+                None,
+                StepDataType.NUMERIC,
+                {"nominal": 120.0, "tolerance": 25.0, "unit": "м³/сут"},
+                "Q_liq",
+                True,
+            ),
         ],
     },
     {
@@ -129,8 +198,14 @@ WORK_TYPES = [
         "equipment": EquipmentType.WELLHEAD,
         "steps": [
             ("Осмотр фланцевых соединений", None, StepDataType.BOOLEAN, None, None, True),
-            ("Проверка давления на буфере", None, StepDataType.NUMERIC,
-             {"nominal": 6.0, "tolerance": 1.5, "unit": "атм"}, "P_buf", True),
+            (
+                "Проверка давления на буфере",
+                None,
+                StepDataType.NUMERIC,
+                {"nominal": 6.0, "tolerance": 1.5, "unit": "атм"},
+                "P_buf",
+                True,
+            ),
             ("Проверка манометров", None, StepDataType.BOOLEAN, None, None, True),
             ("Фото до ТО", None, StepDataType.PHOTO, None, None, True),
             ("Фото после ТО", None, StepDataType.PHOTO, None, None, True),
@@ -146,10 +221,23 @@ WORK_TYPES = [
         "equipment": None,  # применимо ко всему
         "steps": [
             ("Внешний осмотр", None, StepDataType.BOOLEAN, None, None, True),
-            ("Замер ключевых параметров", None, StepDataType.NUMERIC,
-             {"nominal": 0.0, "tolerance": 0.0, "unit": "ед"}, None, True),
+            (
+                "Замер ключевых параметров",
+                None,
+                StepDataType.NUMERIC,
+                {"nominal": 0.0, "tolerance": 0.0, "unit": "ед"},
+                None,
+                True,
+            ),
             ("Фото общего вида", None, StepDataType.PHOTO, None, None, True),
-            ("Заключение о состоянии", "Описание дефектов и рекомендация", StepDataType.TEXT, None, None, True),
+            (
+                "Заключение о состоянии",
+                "Описание дефектов и рекомендация",
+                StepDataType.TEXT,
+                None,
+                None,
+                True,
+            ),
         ],
     },
 ]
@@ -159,9 +247,7 @@ async def seed_work_types(session: AsyncSession) -> list[WorkType]:
     """Создаёт типовые виды работ и шаблоны чек-листов."""
     out: list[WorkType] = []
     for wt_data in WORK_TYPES:
-        existing = await session.scalar(
-            select(WorkType).where(WorkType.code == wt_data["code"])
-        )
+        existing = await session.scalar(select(WorkType).where(WorkType.code == wt_data["code"]))
         if existing:
             out.append(existing)
             continue
@@ -183,7 +269,9 @@ async def seed_work_types(session: AsyncSession) -> list[WorkType]:
         session.add(template)
         await session.flush()
 
-        for idx, (title, desc, dtype, norm, tparam, required) in enumerate(wt_data["steps"], start=1):
+        for idx, (title, desc, dtype, norm, tparam, required) in enumerate(
+            wt_data["steps"], start=1
+        ):
             step = ChecklistStep(
                 template_id=template.id,
                 order_index=idx,
@@ -208,9 +296,7 @@ async def seed_objects(session: AsyncSession, count: int = 5) -> list[Object]:
         cluster_name, lat, lon = WELL_CLUSTERS[i % len(WELL_CLUSTERS)]
         cluster_code = f"KUST-{i+1:03d}"
 
-        existing = await session.scalar(
-            select(Object).where(Object.code == cluster_code)
-        )
+        existing = await session.scalar(select(Object).where(Object.code == cluster_code))
         if existing:
             out.append(existing)
             continue
@@ -274,14 +360,14 @@ async def seed_objects(session: AsyncSession, count: int = 5) -> list[Object]:
 async def seed_contractors(session: AsyncSession) -> list[Contractor]:
     out: list[Contractor] = []
     for name, inn in CONTRACTOR_NAMES:
-        existing = await session.scalar(
-            select(Contractor).where(Contractor.inn == inn)
-        )
+        existing = await session.scalar(select(Contractor).where(Contractor.inn == inn))
         if existing:
             out.append(existing)
             continue
         c = Contractor(
-            name=name, inn=inn, kpp=str(random.randint(1000000, 9999999)),
+            name=name,
+            inn=inn,
+            kpp=str(random.randint(1000000, 9999999)),
             contact_email=f"office@{name.split('«')[1].split('»')[0].lower().replace(' ', '')}.ru",
             contact_phone=f"+7{random.randint(9000000000, 9999999999)}",
             address=f"г. {random.choice(['Альметьевск', 'Бугульма', 'Лениногорск'])}, ул. Промышленная, {random.randint(1, 50)}",
@@ -295,9 +381,7 @@ async def seed_contractors(session: AsyncSession) -> list[Contractor]:
     return out
 
 
-async def seed_users(
-    session: AsyncSession, contractors: list[Contractor]
-) -> list[User]:
+async def seed_users(session: AsyncSession, contractors: list[Contractor]) -> list[User]:
     out: list[User] = []
     base_users = [
         ("admin@tatneft.ru", "Admin Admin", UserRole.ADMIN, None),
@@ -311,8 +395,11 @@ async def seed_users(
             out.append(existing)
             continue
         u = User(
-            email=email, full_name=full_name, role=role,
-            contractor_id=contractor_id, hashed_password=hash_password("password"),
+            email=email,
+            full_name=full_name,
+            role=role,
+            contractor_id=contractor_id,
+            hashed_password=hash_password("password"),
             is_active=True,
         )
         session.add(u)
@@ -390,19 +477,25 @@ async def recalc_contractor_ratings(session: AsyncSession) -> int:
 
         completed_acts = (
             await session.scalars(
-                select(Act).join(WorkOrder, Act.work_order_id == WorkOrder.id).where(
+                select(Act)
+                .join(WorkOrder, Act.work_order_id == WorkOrder.id)
+                .where(
                     WorkOrder.contractor_id == c.id,
-                    Act.status.in_([
-                        ActStatus.AUTO_CONFIRMED,
-                        ActStatus.CONFIRMED,
-                        ActStatus.VERIFIED,
-                    ]),
+                    Act.status.in_(
+                        [
+                            ActStatus.AUTO_CONFIRMED,
+                            ActStatus.CONFIRMED,
+                            ActStatus.VERIFIED,
+                        ]
+                    ),
                 )
             )
         ).all()
         rejected_acts = (
             await session.scalars(
-                select(Act).join(WorkOrder, Act.work_order_id == WorkOrder.id).where(
+                select(Act)
+                .join(WorkOrder, Act.work_order_id == WorkOrder.id)
+                .where(
                     WorkOrder.contractor_id == c.id,
                     Act.status == ActStatus.REJECTED,
                 )
@@ -430,7 +523,9 @@ async def recalc_contractor_ratings(session: AsyncSession) -> int:
             period_end=period_end,
             orders_total=total,
             orders_completed=len(completed_acts),
-            orders_auto_confirmed=sum(1 for a in completed_acts if a.status == ActStatus.AUTO_CONFIRMED),
+            orders_auto_confirmed=sum(
+                1 for a in completed_acts if a.status == ActStatus.AUTO_CONFIRMED
+            ),
             orders_rejected=len(rejected_acts),
             completeness_score=Decimal(str(round(completeness * 100, 2))),
             timeliness_score=Decimal(str(round(timeliness * 100, 2))),
@@ -466,7 +561,7 @@ async def seed_telemetry_history(session: AsyncSession, days: int = 3) -> int:
         log.info("telemetry_history_already_seeded", count=existing)
         return 0
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     start = now - timedelta(days=days)
     step = timedelta(minutes=15)
     inserted = 0
@@ -506,6 +601,7 @@ async def seed_telemetry_history(session: AsyncSession, days: int = 3) -> int:
         for eq_id, eq_type in eq_types.items():
             # стабильный seed: equipment_id + minute bucket
             import hashlib
+
             bucket = int(cur.timestamp()) // 60
             seed = int(hashlib.sha256(f"{eq_id}:{bucket}".encode()).hexdigest(), 16) % (2**32)
             params = _generate_params(eq_type, seed)
@@ -555,9 +651,7 @@ async def seed_work_orders_and_acts(
     """
     from app.integrations.asutp.mock import _generate_params
 
-    wells = (
-        await session.scalars(select(Object).where(Object.kind == ObjectKind.WELL))
-    ).all()
+    wells = (await session.scalars(select(Object).where(Object.kind == ObjectKind.WELL))).all()
     work_types = (await session.scalars(select(WorkType))).all()
     if not wells or not work_types or not contractors:
         return 0, 0
@@ -568,15 +662,13 @@ async def seed_work_orders_and_acts(
         return 0, 0
 
     contractor_users: dict[UUID, User] = {
-        u.contractor_id: u
-        for u in users
-        if u.role == UserRole.CONTRACTOR and u.contractor_id
+        u.contractor_id: u for u in users if u.role == UserRole.CONTRACTOR and u.contractor_id
     }
     managers = [u for u in users if u.role == UserRole.MANAGER]
     masters = [u for u in users if u.role == UserRole.MASTER]
 
     def gen_number(i: int) -> str:
-        return f"WO-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{i:04d}"
+        return f"WO-{datetime.now(UTC).strftime('%Y%m%d')}-{i:04d}"
 
     orders: list[WorkOrder] = []
     acts: list[Act] = []
@@ -590,8 +682,8 @@ async def seed_work_orders_and_acts(
             contractor_id=contractors[i % len(contractors)].id,
             assigned_by_user_id=managers[0].id if managers else None,
             status=WorkOrderStatus.ASSIGNED,
-            planned_start_at=datetime.now(timezone.utc) + timedelta(days=i + 1),
-            planned_end_at=datetime.now(timezone.utc) + timedelta(days=i + 1, hours=8),
+            planned_start_at=datetime.now(UTC) + timedelta(days=i + 1),
+            planned_end_at=datetime.now(UTC) + timedelta(days=i + 1, hours=8),
             planned_cost=Decimal(str(50000 + i * 7500)),
             description=f"Плановые работы по графику {i + 1}",
         )
@@ -607,9 +699,9 @@ async def seed_work_orders_and_acts(
             contractor_id=contractors[(i + 1) % len(contractors)].id,
             assigned_by_user_id=managers[0].id if managers else None,
             status=WorkOrderStatus.IN_PROGRESS,
-            planned_start_at=datetime.now(timezone.utc) - timedelta(days=1),
-            planned_end_at=datetime.now(timezone.utc) + timedelta(hours=4),
-            actual_start_at=datetime.now(timezone.utc) - timedelta(hours=20),
+            planned_start_at=datetime.now(UTC) - timedelta(days=1),
+            planned_end_at=datetime.now(UTC) + timedelta(hours=4),
+            actual_start_at=datetime.now(UTC) - timedelta(hours=20),
             planned_cost=Decimal(str(70000 + i * 10000)),
             description="В работе у подрядчика",
         )
@@ -627,10 +719,10 @@ async def seed_work_orders_and_acts(
             contractor_id=contractors[i % len(contractors)].id,
             assigned_by_user_id=managers[0].id if managers else None,
             status=WorkOrderStatus.IN_PROGRESS,  # временно, потом переопределим
-            planned_start_at=datetime.now(timezone.utc) - timedelta(days=3),
-            planned_end_at=datetime.now(timezone.utc) - timedelta(days=2),
-            actual_start_at=datetime.now(timezone.utc) - timedelta(days=2, hours=20),
-            actual_end_at=datetime.now(timezone.utc) - timedelta(days=2, hours=10),
+            planned_start_at=datetime.now(UTC) - timedelta(days=3),
+            planned_end_at=datetime.now(UTC) - timedelta(days=2),
+            actual_start_at=datetime.now(UTC) - timedelta(days=2, hours=20),
+            actual_end_at=datetime.now(UTC) - timedelta(days=2, hours=10),
             planned_cost=Decimal(str(60000 + i * 5000)),
             actual_cost=Decimal(str(58000 + i * 4800)),
             description="Архивная заявка для демонстрации",
@@ -657,28 +749,22 @@ async def seed_work_orders_and_acts(
             return None
 
         tpl = await session.scalar(
-            select(ChecklistTemplate).where(
-                ChecklistTemplate.work_type_id == wo.work_type_id
-            )
+            select(ChecklistTemplate).where(ChecklistTemplate.work_type_id == wo.work_type_id)
         )
         if not tpl:
             return None
         steps = list(
-            await session.scalars(
-                select(ChecklistStep).where(ChecklistStep.template_id == tpl.id)
-            )
+            await session.scalars(select(ChecklistStep).where(ChecklistStep.template_id == tpl.id))
         )
         if not steps:
             return None
 
-        completed_at = datetime.now(timezone.utc) - timedelta(hours=completed_hours_ago)
+        completed_at = datetime.now(UTC) - timedelta(hours=completed_hours_ago)
         well = await session.get(Object, wo.object_id)
 
         # Снимки телеметрии до/после (синтетика, но стабильная)
         equipment_for_well = (
-            await session.scalars(
-                select(Equipment).where(Equipment.object_id == wo.object_id)
-            )
+            await session.scalars(select(Equipment).where(Equipment.object_id == wo.object_id))
         ).all()
         before: dict[str, dict] = {}
         after: dict[str, dict] = {}
@@ -754,9 +840,14 @@ async def seed_work_orders_and_acts(
                     )
                 )
             elif step.data_type == StepDataType.BOOLEAN:
-                passed = status in (ActStatus.AUTO_CONFIRMED, ActStatus.CONFIRMED, ActStatus.VERIFIED) or random.random() > 0.2
+                passed = (
+                    status in (ActStatus.AUTO_CONFIRMED, ActStatus.CONFIRMED, ActStatus.VERIFIED)
+                    or random.random() > 0.2
+                )
                 session.add(
-                    ChecklistResponse(act_id=act.id, step_id=step.id, value_bool=passed, passed=passed)
+                    ChecklistResponse(
+                        act_id=act.id, step_id=step.id, value_bool=passed, passed=passed
+                    )
                 )
             elif step.data_type == StepDataType.PHOTO:
                 # Фото ниже — запишем Photo-записи
@@ -768,7 +859,8 @@ async def seed_work_orders_and_acts(
                         step_id=step.id,
                         value_text=(
                             "Замечаний нет"
-                            if status in (ActStatus.AUTO_CONFIRMED, ActStatus.CONFIRMED, ActStatus.VERIFIED)
+                            if status
+                            in (ActStatus.AUTO_CONFIRMED, ActStatus.CONFIRMED, ActStatus.VERIFIED)
                             else "Обнаружены следы износа, требуется повторный осмотр"
                         ),
                         passed=(status not in (ActStatus.REJECTED,)),
@@ -788,9 +880,7 @@ async def seed_work_orders_and_acts(
                         taken_at=completed_at,
                         latitude=act.actual_latitude,
                         longitude=act.actual_longitude,
-                        sha256=hashlib.sha256(
-                            f"{act.id}-{kind.value}".encode()
-                        ).hexdigest(),
+                        sha256=hashlib.sha256(f"{act.id}-{kind.value}".encode()).hexdigest(),
                         created_at=completed_at,
                     )
                 )
@@ -805,11 +895,18 @@ async def seed_work_orders_and_acts(
     historical = orders[-HISTORICAL_COUNT:] if len(orders) >= HISTORICAL_COUNT else orders
     if len(historical) >= 8:
         for i, wo in enumerate(historical[:8]):
-            await make_act(wo, ActStatus.AUTO_CONFIRMED, WorkOrderStatus.AUTO_CONFIRMED, completed_hours_ago=24 + i * 6)
+            await make_act(
+                wo,
+                ActStatus.AUTO_CONFIRMED,
+                WorkOrderStatus.AUTO_CONFIRMED,
+                completed_hours_ago=24 + i * 6,
+            )
             acts.append(wo)  # type: ignore[arg-type]
     if len(historical) >= 10:
         for i, wo in enumerate(historical[8:10]):
-            await make_act(wo, ActStatus.CONFIRMED, WorkOrderStatus.CONFIRMED, completed_hours_ago=48 + i * 12)
+            await make_act(
+                wo, ActStatus.CONFIRMED, WorkOrderStatus.CONFIRMED, completed_hours_ago=48 + i * 12
+            )
             acts.append(wo)  # type: ignore[arg-type]
     if len(historical) >= 12:
         for i, wo in enumerate(historical[10:12]):

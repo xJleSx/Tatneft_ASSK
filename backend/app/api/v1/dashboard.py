@@ -1,8 +1,8 @@
 """Dashboard: агрегаты для UI."""
+
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
-from uuid import UUID
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
@@ -12,7 +12,7 @@ from app.api.deps import get_current_user
 from app.db.session import get_session
 from app.models.act import Act, ActStatus
 from app.models.contractor import Contractor
-from app.models.order import WorkOrder, WorkOrderStatus
+from app.models.order import WorkOrder
 from app.models.user import User
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
@@ -41,16 +41,14 @@ async def summary(
         or 0
     )
     rejected = (
-        await session.scalar(
-            select(func.count(Act.id)).where(Act.status == ActStatus.REJECTED)
-        )
+        await session.scalar(select(func.count(Act.id)).where(Act.status == ActStatus.REJECTED))
         or 0
     )
 
-    last_30d = datetime.now(timezone.utc) - timedelta(days=30)
-    recent_acts = await session.scalar(
-        select(func.count(Act.id)).where(Act.created_at >= last_30d)
-    ) or 0
+    last_30d = datetime.now(UTC) - timedelta(days=30)
+    recent_acts = (
+        await session.scalar(select(func.count(Act.id)).where(Act.created_at >= last_30d)) or 0
+    )
 
     return {
         "total_work_orders": total_orders,
@@ -58,9 +56,7 @@ async def summary(
         "auto_confirmed": auto_confirmed,
         "pending_review": pending_review,
         "rejected": rejected,
-        "auto_confirmation_rate": (
-            round(auto_confirmed / total_acts, 3) if total_acts else 0.0
-        ),
+        "auto_confirmation_rate": (round(auto_confirmed / total_acts, 3) if total_acts else 0.0),
         "acts_last_30d": recent_acts,
     }
 
@@ -71,9 +67,7 @@ async def contractor_ranking(
     _: User = Depends(get_current_user),
 ) -> list[dict]:
     rows = (
-        await session.scalars(
-            select(Contractor).order_by(Contractor.rating_score.desc())
-        )
+        await session.scalars(select(Contractor).order_by(Contractor.rating_score.desc()))
     ).all()
     return [
         {
@@ -92,9 +86,7 @@ async def recent_orders(
     _: User = Depends(get_current_user),
 ) -> list[dict]:
     rows = (
-        await session.scalars(
-            select(WorkOrder).order_by(WorkOrder.created_at.desc()).limit(limit)
-        )
+        await session.scalars(select(WorkOrder).order_by(WorkOrder.created_at.desc()).limit(limit))
     ).all()
     return [
         {

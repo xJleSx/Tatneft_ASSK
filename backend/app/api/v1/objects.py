@@ -1,9 +1,10 @@
 """Objects: производственные объекты и оборудование."""
+
 from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -49,11 +50,7 @@ async def list_equipment(
     session: AsyncSession = Depends(get_session),
     _: User = Depends(get_current_user),
 ) -> list[dict]:
-    rows = (
-        await session.scalars(
-            select(Equipment).where(Equipment.object_id == object_id)
-        )
-    ).all()
+    rows = (await session.scalars(select(Equipment).where(Equipment.object_id == object_id))).all()
     return [
         {
             "id": str(e.id),

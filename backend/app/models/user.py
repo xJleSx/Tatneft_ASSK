@@ -7,13 +7,14 @@
 - master — мастер (приёмка)
 - contractor — сотрудник подрядчика
 """
+
 from __future__ import annotations
 
 import enum
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, func
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -49,6 +50,4 @@ class User(UUIDPKMixin, TimestampMixin, Base):
     )
 
     contractor = relationship("Contractor", back_populates="users", lazy="noload")
-    last_login_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

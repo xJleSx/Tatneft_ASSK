@@ -1,4 +1,5 @@
 """Схемы фото и телеметрии."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -6,7 +7,7 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
-from pydantic import ConfigDict, Field
+from pydantic import ConfigDict
 
 from app.models.photo import PhotoKind
 from app.schemas.common import ORMModel

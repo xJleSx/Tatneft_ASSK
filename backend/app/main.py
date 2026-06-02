@@ -1,4 +1,5 @@
 """Главный модуль FastAPI."""
+
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
@@ -6,10 +7,19 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1 import auth, contractors, objects, works, orders, acts, telemetry, dashboard, anomalies
+from app.api.v1 import (
+    acts,
+    anomalies,
+    auth,
+    contractors,
+    dashboard,
+    objects,
+    orders,
+    telemetry,
+    works,
+)
 from app.core.config import settings
 from app.core.logging import get_logger, setup_logging
-from app.db.session import async_session_factory
 
 setup_logging()
 log = get_logger("app.main")

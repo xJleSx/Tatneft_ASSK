@@ -1,4 +1,5 @@
 """Photo: фотофиксация к акту (до/после/проблема)."""
+
 from __future__ import annotations
 
 import enum
@@ -50,8 +51,6 @@ class Photo(UUIDPKMixin, Base):
     # EXIF метаданные (JSON как строка для простоты)
     exif_json: Mapped[str | None] = mapped_column(String(2048), nullable=True)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     act = relationship("Act", back_populates="photos", lazy="noload")

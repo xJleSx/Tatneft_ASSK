@@ -1,7 +1,8 @@
 """Telemetry: снимки и история параметров equipment."""
+
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
@@ -11,7 +12,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.db.session import get_session
 from app.integrations.asutp.factory import get_asutp_adapter
-from app.models.equipment import Equipment
 from app.models.telemetry import TelemetryReading
 from app.models.user import User
 
@@ -35,7 +35,7 @@ async def history(
     _: User = Depends(get_current_user),
 ):
     """История из БД (накопленная при опросе)."""
-    since = datetime.now(timezone.utc) - timedelta(hours=hours)
+    since = datetime.now(UTC) - timedelta(hours=hours)
     rows = (
         await session.scalars(
             select(TelemetryReading)

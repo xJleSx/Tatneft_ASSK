@@ -3,10 +3,11 @@
 Генерирует реалистичные параметры на основе типа оборудования и псевдослучайного
 "состояния". Используется пока нет доступа к реальной АСУ ТП.
 """
+
 from __future__ import annotations
 
 import hashlib
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -67,6 +68,7 @@ def _stable_seed(equipment_id: UUID, dt: datetime) -> int:
 def _generate_params(equipment_type: EquipmentType, seed: int) -> dict[str, float]:
     """Генерирует набор параметров в допустимом диапазоне с шумом."""
     import random
+
     rng = random.Random(seed)
     ranges = _PARAM_RANGES.get(equipment_type, _PARAM_RANGES[EquipmentType.OTHER])
     out: dict[str, float] = {}
@@ -81,10 +83,8 @@ def _generate_params(equipment_type: EquipmentType, seed: int) -> dict[str, floa
 class MockAsutpAdapter(AsutpAdapter):
     """Возвращает синтетические, но стабильные во времени данные."""
 
-    async def get_snapshot(
-        self, equipment_id: UUID, at: datetime | None = None
-    ) -> dict[str, Any]:
-        at = at or datetime.now(timezone.utc)
+    async def get_snapshot(self, equipment_id: UUID, at: datetime | None = None) -> dict[str, Any]:
+        at = at or datetime.now(UTC)
         # Тип оборудования в прототипе — дефолтный, т.к. не ходим в БД здесь.
         # Реальный адаптер будет получать тип из БД.
         eq_type = self._resolve_type(equipment_id)
@@ -109,10 +109,12 @@ class MockAsutpAdapter(AsutpAdapter):
         step = timedelta(minutes=15)
         while cur <= until:
             seed = _stable_seed(equipment_id, cur)
-            out.append({
-                "observed_at": cur.isoformat(),
-                "params": _generate_params(eq_type, seed),
-            })
+            out.append(
+                {
+                    "observed_at": cur.isoformat(),
+                    "params": _generate_params(eq_type, seed),
+                }
+            )
             cur += step
         return out
 

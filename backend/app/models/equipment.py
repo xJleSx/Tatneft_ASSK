@@ -1,4 +1,5 @@
 """Equipment: оборудование на объекте (УШГН, УЭЦН, и т.п.)."""
+
 from __future__ import annotations
 
 import enum
@@ -13,8 +14,8 @@ from app.db.base import Base, TimestampMixin, UUIDPKMixin
 
 
 class EquipmentType(str, enum.Enum):
-    USHGN = "ushgn"   # штанговый насос (УШГН)
-    UECN = "uecn"    # электроцентробежный насос (УЭЦН)
+    USHGN = "ushgn"  # штанговый насос (УШГН)
+    UECN = "uecn"  # электроцентробежный насос (УЭЦН)
     WELLHEAD = "wellhead"  # устьевая арматура
     PUMP_UNIT = "pump_unit"
     SEPARATOR = "separator"
@@ -36,9 +37,7 @@ class Equipment(UUIDPKMixin, TimestampMixin, Base):
         nullable=False,
         index=True,
     )
-    serial_number: Mapped[str] = mapped_column(
-        String(128), unique=True, index=True, nullable=False
-    )
+    serial_number: Mapped[str] = mapped_column(String(128), unique=True, index=True, nullable=False)
     manufacturer: Mapped[str | None] = mapped_column(String(255), nullable=True)
     model: Mapped[str | None] = mapped_column(String(255), nullable=True)
     commissioned_at: Mapped[date | None] = mapped_column(Date, nullable=True)

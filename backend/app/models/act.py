@@ -2,6 +2,7 @@
 
 Привязан к WorkOrder. Содержит заполненные пункты чек-листа и фото.
 """
+
 from __future__ import annotations
 
 import enum
@@ -9,14 +10,13 @@ from decimal import Decimal
 from uuid import UUID
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     DateTime,
     Enum,
     Float,
     ForeignKey,
-    JSON,
     Numeric,
-    String,
     Text,
 )
 from sqlalchemy.dialects.postgresql import UUID as PGUUID

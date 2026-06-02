@@ -1,8 +1,8 @@
 """Contractor: подрядная организация."""
+
 from __future__ import annotations
 
 from decimal import Decimal
-from uuid import UUID
 
 from sqlalchemy import Boolean, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
