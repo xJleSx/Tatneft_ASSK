@@ -636,6 +636,258 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     .mono { font-family: var(--font-mono); }
     .tabular { font-variant-numeric: tabular-nums; }
+
+    /* ============================================================
+       CONTRACTOR VIEW (mobile-first)
+       ============================================================ */
+    .field-app {
+      max-width: 560px;
+      margin: 0 auto;
+      min-height: 100vh;
+      background: var(--bg);
+      position: relative;
+    }
+    .field-top {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 16px;
+      background: var(--bg-2);
+      border-bottom: 1px solid var(--line-2);
+      position: sticky; top: 0; z-index: 10;
+    }
+    .field-top .icon-btn {
+      width: 40px; height: 40px;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent; color: var(--ink-2);
+      border: 1px solid var(--line-2);
+      cursor: pointer;
+    }
+    .field-top .icon-btn:hover { color: var(--ink); border-color: var(--line-3); }
+    .field-top .icon-btn svg { width: 18px; height: 18px; }
+    .field-top .top-title { font-weight: 700; font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .field-top .top-title small { display: block; font-weight: 400; font-size: 11px; color: var(--muted); letter-spacing: 0.04em; text-transform: none; margin-top: 1px; font-family: var(--font-mono); }
+    .field-top .rating { font-family: var(--font-mono); font-size: 12px; color: var(--ok); font-weight: 600; }
+
+    .field-body { padding: 16px 16px 100px 16px; }
+    .field-section { margin-bottom: 24px; }
+    .field-section .sec-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .field-section .sec-title::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+
+    /* Order card */
+    .order-card {
+      display: block;
+      background: var(--panel);
+      border: 1px solid var(--line-2);
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      text-align: left;
+      width: 100%;
+      color: var(--ink);
+      font-family: inherit;
+      position: relative;
+    }
+    .order-card:active { background: var(--panel-2); }
+    .order-card .row1 { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .order-card .num { font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--ink); }
+    .order-card .meta { font-size: 12px; color: var(--ink-3); }
+    .order-card .meta b { color: var(--ink-2); font-weight: 500; }
+    .order-card .stripe { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
+    .order-card .stripe.gray   { background: var(--dim); }
+    .order-card .stripe.blue   { background: var(--info); }
+    .order-card .stripe.yellow { background: var(--warn); }
+    .order-card .stripe.green  { background: var(--ok); }
+    .order-card .stripe.red    { background: var(--bad); }
+    .order-card .stripe.orange { background: var(--signal); }
+
+    /* Status pills (compact) */
+    .pill {
+      display: inline-block;
+      padding: 2px 7px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 600;
+      border: 1px solid currentColor;
+    }
+
+    /* Big buttons (touch-friendly) */
+    .big-btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%;
+      min-height: 52px;
+      padding: 14px 18px;
+      font-family: var(--font-sans);
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      background: var(--signal);
+      color: #1a1814;
+      border: none;
+      cursor: pointer;
+    }
+    .big-btn:hover { background: var(--signal-2); }
+    .big-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .big-btn.btn-ghost { background: transparent; color: var(--ink); border: 1px solid var(--line-2); }
+    .big-btn.btn-ghost:hover { background: var(--panel-2); border-color: var(--line-3); }
+    .big-btn.btn-success { background: var(--ok); }
+    .big-btn.btn-success:hover { background: #9bbd6b; }
+    .big-btn svg { width: 18px; height: 18px; }
+
+    /* Bottom-anchored action bar (thumb reach) */
+    .field-bottom-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--bg-2);
+      border-top: 1px solid var(--line-2);
+      padding: 12px 16px;
+      display: flex; gap: 8px;
+      max-width: 560px; margin: 0 auto;
+      z-index: 20;
+    }
+    .field-bottom-bar .big-btn { min-height: 48px; padding: 12px; font-size: 14px; }
+    .field-bottom-bar .big-btn.btn-ghost { flex: 0 0 auto; min-width: 100px; }
+
+    /* Checklist step card */
+    .step {
+      background: var(--panel);
+      border: 1px solid var(--line-2);
+      padding: 14px 16px;
+      margin-bottom: 10px;
+    }
+    .step.is-required { border-left: 3px solid var(--signal); }
+    .step.is-passed { border-left: 3px solid var(--ok); }
+    .step.is-failed { border-left: 3px solid var(--bad); }
+    .step .step-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
+    .step .step-num { font-family: var(--font-mono); font-size: 11px; color: var(--muted); font-weight: 600; }
+    .step .step-title { font-size: 14px; font-weight: 600; color: var(--ink); line-height: 1.4; }
+    .step .step-desc { font-size: 12px; color: var(--ink-3); margin-top: 4px; }
+    .step .step-norm { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-top: 4px; }
+    .step .step-input { margin-top: 10px; }
+
+    .step input[type="number"], .step input[type="text"] {
+      width: 100%;
+      padding: 12px 14px;
+      background: var(--bg-2);
+      color: var(--ink);
+      border: 1px solid var(--line-2);
+      font-family: var(--font-mono);
+      font-size: 16px;
+      font-weight: 600;
+      border-radius: 0;
+    }
+    .step input[type="number"]:focus, .step input[type="text"]:focus { outline: 2px solid var(--signal); outline-offset: -2px; }
+    .step textarea { width: 100%; min-height: 70px; padding: 12px 14px; background: var(--bg-2); color: var(--ink); border: 1px solid var(--line-2); font-family: var(--font-sans); font-size: 14px; border-radius: 0; resize: vertical; }
+    .step textarea:focus { outline: 2px solid var(--signal); outline-offset: -2px; }
+
+    /* Boolean toggle (iOS-style but industrial) */
+    .bool-toggle {
+      display: flex; gap: 0; margin-top: 10px;
+      border: 1px solid var(--line-2);
+    }
+    .bool-toggle button {
+      flex: 1;
+      padding: 14px;
+      background: var(--bg-2);
+      color: var(--ink-3);
+      border: none;
+      font-family: var(--font-sans);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+    }
+    .bool-toggle button + button { border-left: 1px solid var(--line-2); }
+    .bool-toggle button.active-yes { background: var(--ok); color: #1a1814; }
+    .bool-toggle button.active-no { background: var(--bad); color: #1a1814; }
+    .bool-toggle button.active-yes::before { content: '✓ '; }
+    .bool-toggle button.active-no::before { content: '✗ '; }
+
+    /* Photo upload tiles */
+    .photo-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+      margin-top: 10px;
+    }
+    .photo-tile {
+      aspect-ratio: 1;
+      background: var(--bg-2);
+      border: 1px dashed var(--line-2);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      color: var(--muted);
+      position: relative;
+      overflow: hidden;
+    }
+    .photo-tile.has-photo { border-style: solid; border-color: var(--line-2); }
+    .photo-tile img { width: 100%; height: 100%; object-fit: cover; }
+    .photo-tile .gps-badge {
+      position: absolute; bottom: 4px; left: 4px;
+      font-family: var(--font-mono); font-size: 9px;
+      background: rgba(0,0,0,0.7); color: var(--ok);
+      padding: 2px 4px; letter-spacing: 0.04em;
+    }
+    .photo-tile input[type=file] { display: none; }
+    .photo-tile .placeholder { font-size: 24px; color: var(--dim); }
+    .photo-tile .placeholder-label { position: absolute; bottom: 6px; left: 0; right: 0; text-align: center; font-family: var(--font-mono); font-size: 9px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+
+    /* GPS card */
+    .gps-card {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 16px;
+      background: var(--panel);
+      border: 1px solid var(--line-2);
+    }
+    .gps-card.has-fix { border-color: var(--ok); }
+    .gps-card.no-fix { border-color: var(--warn); }
+    .gps-card .gps-icon { font-size: 22px; }
+    .gps-card .gps-text { flex: 1; min-width: 0; }
+    .gps-card .gps-coords { font-family: var(--font-mono); font-size: 15px; font-weight: 600; color: var(--ink); }
+    .gps-card .gps-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .gps-card button { padding: 8px 14px; background: var(--bg-2); color: var(--ink-2); border: 1px solid var(--line-2); font-size: 12px; cursor: pointer; font-family: var(--font-sans); font-weight: 600; }
+    .gps-card button:hover { border-color: var(--signal); color: var(--signal); }
+    .gps-card button:disabled { opacity: 0.5; }
+
+    /* Progress bar (checklist completion) */
+    .progress {
+      height: 4px; background: var(--bg-2); margin-bottom: 16px;
+    }
+    .progress > div { height: 100%; background: var(--signal); transition: width 0.2s; }
+
+    /* Subheader (order title in checklist view) */
+    .order-summary {
+      padding: 16px 0;
+      border-bottom: 1px solid var(--line);
+      margin-bottom: 16px;
+    }
+    .order-summary .number { font-family: var(--font-mono); font-size: 12px; color: var(--muted); letter-spacing: 0.08em; }
+    .order-summary .title { font-size: 18px; font-weight: 700; color: var(--ink); margin-top: 4px; line-height: 1.3; }
+    .order-summary .where { font-size: 13px; color: var(--ink-3); margin-top: 4px; }
+    .order-summary .where b { color: var(--ink-2); font-weight: 500; }
+
+    /* Welcome screen (contractor) */
+    .welcome-block {
+      background: var(--panel);
+      border: 1px solid var(--line-2);
+      padding: 18px 16px;
+      margin-bottom: 20px;
+    }
+    .welcome-block .org { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; }
+    .welcome-block .name { font-size: 18px; font-weight: 700; color: var(--ink); margin-top: 4px; }
+    .welcome-block .meta { display: flex; gap: 16px; margin-top: 10px; font-family: var(--font-mono); font-size: 12px; color: var(--ink-3); }
+    .welcome-block .meta b { color: var(--ink); }
+
+    /* Responsive: at desktop, contractor view is a centered narrow column */
+    @media (min-width: 720px) {
+      .field-app { border-left: 1px solid var(--line); border-right: 1px solid var(--line); }
+    }
   </style>
 </head>
 <body>
@@ -862,6 +1114,23 @@
   <div id="toast" class="toast" style="display:none"></div>
 </div>
 
+<!-- ====================== Contractor (field) view ====================== -->
+<div id="field" style="display:none">
+  <div class="field-app">
+    <div class="field-top">
+      <button class="icon-btn" id="field-back" style="display:none">
+        <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 3L5 9l6 6"/></svg>
+      </button>
+      <div class="top-title" id="field-title">
+        <small>АСКК · ПОЛЕ</small>
+        Мои наряды
+      </div>
+      <div class="rating" id="field-rating" style="display:none">★ —</div>
+    </div>
+    <div class="field-body" id="field-body">…</div>
+  </div>
+</div>
+
 <script>
 // ===========================================================================
 // Config
@@ -957,8 +1226,19 @@ function showLogin() {
 }
 function showApp() {
   $("login").style.display = "none";
-  $("app").style.display = "block";
-  loadDashboard();
+  // Роутинг по ролям
+  api("/auth/me").then((me) => {
+    window._currentUser = me;
+    if (me.role === "contractor") {
+      showFieldView();
+    } else {
+      $("app").style.display = "block";
+      loadDashboard();
+    }
+  }).catch(() => {
+    $("app").style.display = "block";
+    loadDashboard();
+  });
 }
 
 // ===========================================================================
@@ -1368,18 +1648,460 @@ document.addEventListener("click", (e) => {
   }
 });
 
-const _origShowApp = showApp;
-showApp = function () {
-  _origShowApp();
-  if (ALLOWED_CREATE_ROLES.has(window._currentUser?.role)) {
-    $("new-order-btn").style.display = "inline-flex";
-    $("new-order-btn").addEventListener("click", openOrderModal);
-  }
-  setupAutoRefresh();
-};
-
 if (localStorage.getItem(TOKEN_KEY)) showApp();
 else showLogin();
+
+// ===========================================================================
+// CONTRACTOR (field) view
+// ===========================================================================
+let _fieldState = { view: "list", order: null, template: null, draft: null, geo: null };
+
+function showFieldView() {
+  $("app").style.display = "none";
+  $("field").style.display = "block";
+  renderFieldList();
+}
+
+function fieldGo(view) {
+  _fieldState.view = view;
+  $("field-back").style.display = view === "list" ? "none" : "flex";
+  if (view === "list") renderFieldList();
+  if (view === "checklist") renderChecklistView();
+  if (view === "result") renderResultView();
+}
+
+$("field-back").addEventListener("click", () => fieldGo("list"));
+
+function fieldToast(msg, isErr) { toast(msg, isErr); }
+
+function fieldPill(status) {
+  const m = STATUS_META[status] || { bar: "gray", label: status };
+  return `<span class="pill" style="color: var(--${m.bar === 'gray' ? 'dim' : m.bar})">${m.label}</span>`;
+}
+
+async function renderFieldList() {
+  $("field-title").innerHTML = `<small>АСКК · ПОЛЕ</small>Мои наряды`;
+  $("field-rating").style.display = "none";
+
+  // Параллельно: наряды, мои акты, инфо о подрядчике (для рейтинга)
+  const me = window._currentUser;
+  const [orders, acts, contrs] = await Promise.all([
+    api("/orders?limit=100"),
+    api("/acts?limit=20"),
+    me?.contractor_id ? api("/contractors?limit=100") : Promise.resolve([]),
+  ]);
+  const myContr = (contrs || []).find((c) => c.id === me?.contractor_id);
+
+  $("field-rating").style.display = myContr ? "block" : "none";
+  if (myContr) $("field-rating").textContent = `★ ${(myContr.rating_score || 0).toFixed(1)}`;
+
+  const active = orders.filter((o) => ["assigned", "in_progress", "submitted", "auto_confirmed", "delayed_verification", "confirmed"].includes(o.status));
+  const done = orders.filter((o) => ["confirmed", "auto_confirmed", "rejected"].includes(o.status));
+
+  $("field-body").innerHTML = `
+    ${myContr ? `<div class="welcome-block">
+      <div class="org">Подрядчик</div>
+      <div class="name">${myContr.name}</div>
+      <div class="meta">
+        <span>ИНН <b>${myContr.inn}</b></span>
+        <span>Рейтинг <b style="color:var(--ok)">${(myContr.rating_score || 0).toFixed(1)}</b></span>
+        <span>Актов <b>${acts.length}</b></span>
+      </div>
+    </div>` : ""}
+
+    <div class="field-section">
+      <div class="sec-title">Активные · ${active.length}</div>
+      ${active.length === 0
+        ? `<div class="empty" style="padding: 30px 0;">Нет активных нарядов</div>`
+        : active.map(orderCardHTML).join("")}
+    </div>
+
+    ${acts.length > 0 ? `<div class="field-section">
+      <div class="sec-title">Мои последние акты · ${acts.length}</div>
+      ${acts.slice(0, 5).map(actCardHTML).join("")}
+    </div>` : ""}
+  `;
+
+  // Bind clicks
+  document.querySelectorAll(".order-card[data-oid]").forEach((el) => {
+    el.addEventListener("click", () => openOrder(el.dataset.oid));
+  });
+  document.querySelectorAll(".act-card[data-aid]").forEach((el) => {
+    el.addEventListener("click", () => openAct(el.dataset.aid));
+  });
+}
+
+function orderCardHTML(o) {
+  return `<button class="order-card" data-oid="${o.id}">
+    <div class="stripe ${STATUS_META[o.status]?.bar || "gray"}"></div>
+    <div class="row1">
+      <div class="num">${o.number}</div>
+      ${fieldPill(o.status)}
+    </div>
+    <div class="meta">Объект <b>${o.object_id.slice(0, 8)}</b> · ${fmtDate(o.created_at)}</div>
+  </button>`;
+}
+
+function actCardHTML(a) {
+  const score = a.auto_check_score;
+  return `<button class="order-card" data-aid="${a.id}">
+    <div class="stripe ${STATUS_META[a.status]?.bar || "gray"}"></div>
+    <div class="row1">
+      <div class="num">${a.id.slice(0, 8).toUpperCase()}</div>
+      ${fieldPill(a.status)}
+    </div>
+    <div class="meta">
+      Наряд <b>${a.work_order_id.slice(0, 8).toUpperCase()}</b>
+      · ${fmtDate(a.created_at)}
+      ${score != null ? ` · score <b>${(score * 100).toFixed(0)}%</b>` : ""}
+    </div>
+  </button>`;
+}
+
+async function openOrder(orderId) {
+  _fieldState.order = await api(`/orders/${orderId}`);
+  // Если assigned — предложить взять в работу
+  if (_fieldState.order.status === "assigned") {
+    if (confirm(`Взять в работу наряд ${_fieldState.order.number}?\n\nСтатус изменится на «в работе», зафиксируется время начала.`)) {
+      try {
+        _fieldState.order = await api(`/orders/${orderId}/start`, { method: "POST" });
+        fieldToast("Взято в работу ✓");
+      } catch (e) { fieldToast(e.message, true); return; }
+    } else {
+      return;
+    }
+  }
+  // Если уже в работе — открываем чек-лист
+  if (["in_progress", "rejected", "delayed_verification"].includes(_fieldState.order.status)) {
+    openChecklist();
+  } else if (_fieldState.order.status === "submitted") {
+    fieldToast("Акт уже отправлен на проверку");
+  } else if (_fieldState.order.status === "auto_confirmed" || _fieldState.order.status === "confirmed") {
+    fieldToast("Наряд уже подтверждён ✓");
+  }
+}
+
+async function openChecklist() {
+  const order = _fieldState.order;
+  // Загрузить шаблон
+  _fieldState.template = await api(`/works/types/${order.work_type_id}/template`);
+  // Создать draft-акт (если ещё нет)
+  const myActs = await api(`/acts?work_order_id=${order.id}&limit=1`);
+  let draft = myActs.find((a) => a.status === "draft");
+  if (!draft) {
+    draft = await api("/acts/", {
+      method: "POST",
+      body: JSON.stringify({
+        work_order_id: order.id,
+        actual_latitude: 54.4,
+        actual_longitude: 53.25,
+        actual_at: new Date().toISOString(),
+        responses: [],
+        photo_keys: [],
+      }),
+    });
+  }
+  _fieldState.draft = draft;
+  _fieldState.responses = {}; // step_id → { value_bool, value_numeric, value_text, passed, comment }
+  _fieldState.geo = null;
+  fieldGo("checklist");
+}
+
+// ============================================================================
+// Checklist view
+// ============================================================================
+function renderChecklistView() {
+  const order = _fieldState.order;
+  const tpl = _fieldState.template;
+  const steps = tpl.steps || [];
+
+  $("field-title").innerHTML = `<small>${order.number}</small>Чек-лист · ${steps.length} шагов`;
+
+  const filled = Object.keys(_fieldState.responses || {}).length;
+  const pct = steps.length ? Math.round((filled / steps.length) * 100) : 0;
+
+  $("field-body").innerHTML = `
+    <div class="order-summary">
+      <div class="number">${order.number}</div>
+      <div class="title">${tpl.name || "Чек-лист"}</div>
+      <div class="where">Объект <b>${order.object_id.slice(0, 8).toUpperCase()}</b></div>
+    </div>
+
+    <div class="progress"><div style="width: ${pct}%"></div></div>
+
+    <div class="field-section">
+      <div class="sec-title">📍 Геолокация</div>
+      <div class="gps-card ${_fieldState.geo ? "has-fix" : "no-fix"}" id="gps-card">
+        <div class="gps-icon">${_fieldState.geo ? "✓" : "📍"}</div>
+        <div class="gps-text">
+          <div class="gps-coords">${_fieldState.geo ? `${_fieldState.geo.lat.toFixed(5)}, ${_fieldState.geo.lon.toFixed(5)}` : "Координаты не получены"}</div>
+          <div class="gps-sub">${_fieldState.geo ? `точность: ${Math.round(_fieldState.geo.acc)} м` : "нужны для авто-проверки"}</div>
+        </div>
+        <button id="gps-btn" type="button">${_fieldState.geo ? "Обновить" : "Я на объекте"}</button>
+      </div>
+    </div>
+
+    <div class="field-section">
+      <div class="sec-title">Шаги чек-листа</div>
+      ${steps.map((s, i) => stepHTML(s, i)).join("")}
+    </div>
+
+    <div class="field-section">
+      <div class="sec-title">📷 Фото (опционально)</div>
+      <div class="photo-grid" id="photo-grid">
+        ${photoTileHTML("before", "до")}
+        ${photoTileHTML("after", "после")}
+        ${photoTileHTML("other", "ещё")}
+      </div>
+    </div>
+
+    <div class="field-bottom-bar">
+      <button class="big-btn btn-ghost" id="field-cancel">Отмена</button>
+      <button class="big-btn btn-success" id="field-submit">${filled < steps.length ? `Заполнить остальные (${steps.length - filled})` : "Отправить наряд ✓"}</button>
+    </div>
+  `;
+
+  // Handlers
+  $("gps-btn").addEventListener("click", acquireGeo);
+  $("field-cancel").addEventListener("click", () => fieldGo("list"));
+  $("field-submit").addEventListener("click", submitAct);
+  document.querySelectorAll(".step input, .step textarea, .step button").forEach((el) => {
+    el.addEventListener("input", onStepChange);
+    el.addEventListener("change", onStepChange);
+    el.addEventListener("click", onStepChange);
+  });
+  document.querySelectorAll(".photo-tile input[type=file]").forEach((inp) => {
+    inp.addEventListener("change", onPhotoChange);
+  });
+}
+
+function stepHTML(s, i) {
+  const r = (_fieldState.responses || {})[s.id] || {};
+  const required = s.is_required ? "is-required" : "";
+  const passed = r.passed === true ? "is-passed" : r.passed === false ? "is-failed" : "";
+  const norm = s.norm_json || {};
+  let input = "";
+  if (s.data_type === "boolean") {
+    input = `<div class="bool-toggle" data-step="${s.id}">
+      <button type="button" data-val="yes" class="${r.value_bool === true ? "active-yes" : ""}">Выполнено</button>
+      <button type="button" data-val="no" class="${r.value_bool === false ? "active-no" : ""}">Нет</button>
+    </div>`;
+  } else if (s.data_type === "numeric") {
+    const val = r.value_numeric != null ? r.value_numeric : "";
+    input = `<div class="step-input">
+      <input type="number" step="0.01" data-step="${s.id}" data-kind="numeric" value="${val}" placeholder="${norm.nominal ?? ""}" />
+      ${norm.unit ? `<div class="step-norm">ед.: ${norm.unit} · норма: ${norm.nominal} ± ${norm.tolerance}</div>` : ""}
+    </div>`;
+  } else if (s.data_type === "text") {
+    input = `<div class="step-input">
+      <textarea data-step="${s.id}" data-kind="text" placeholder="Введите заключение…">${r.value_text || ""}</textarea>
+    </div>`;
+  } else {
+    input = `<div class="step-input">
+      <input type="text" data-step="${s.id}" data-kind="text" value="${r.value_text || ""}" />
+    </div>`;
+  }
+  return `<div class="step ${required} ${passed}" data-step-card="${s.id}">
+    <div class="step-head">
+      <div>
+        <div class="step-num">ШАГ ${i + 1} / ${(_fieldState.template?.steps || []).length}${s.is_required ? " · ОБЯЗАТЕЛЬНО" : ""}</div>
+        <div class="step-title">${s.title}</div>
+        ${s.description ? `<div class="step-desc">${s.description}</div>` : ""}
+      </div>
+    </div>
+    ${input}
+  </div>`;
+}
+
+function onStepChange(e) {
+  const t = e.target;
+  const stepId = t.dataset.step;
+  if (!stepId || !_fieldState.responses) return;
+  const r = _fieldState.responses[stepId] = _fieldState.responses[stepId] || {};
+  if (t.dataset.kind === "numeric") {
+    const v = parseFloat(t.value);
+    r.value_numeric = isNaN(v) ? null : v;
+    if (v === "" || isNaN(v)) r.passed = null;
+    else {
+      const norm = (_fieldState.template.steps.find((s) => s.id === stepId) || {}).norm_json || {};
+      const tol = norm.tolerance || 0;
+      const nom = norm.nominal;
+      r.passed = nom != null ? Math.abs(v - nom) <= tol : true;
+    }
+  } else if (t.dataset.kind === "text") {
+    r.value_text = t.value;
+    r.passed = t.value.trim() ? true : null;
+  } else if (t.tagName === "BUTTON") {
+    const yes = t.dataset.val === "yes";
+    r.value_bool = yes;
+    r.passed = yes ? true : false;
+    // Обновить визуал кнопок
+    const toggle = t.closest(".bool-toggle");
+    if (toggle) {
+      toggle.querySelectorAll("button").forEach((b) => {
+        b.classList.remove("active-yes", "active-no");
+      });
+      t.classList.add(yes ? "active-yes" : "active-no");
+    }
+  }
+  // Обновить визуал карточки
+  const card = document.querySelector(`.step[data-step-card="${stepId}"]`);
+  if (card) {
+    card.classList.remove("is-passed", "is-failed");
+    if (r.passed === true) card.classList.add("is-passed");
+    else if (r.passed === false) card.classList.add("is-failed");
+  }
+  // Обновить прогресс
+  const filled = Object.values(_fieldState.responses).filter((x) => x.passed != null).length;
+  const total = (_fieldState.template?.steps || []).length;
+  const pct = total ? Math.round((filled / total) * 100) : 0;
+  document.querySelector(".progress > div")?.setAttribute("style", `width: ${pct}%`);
+  const submitBtn = $("field-submit");
+  if (submitBtn) {
+    submitBtn.textContent = filled < total ? `Заполнить остальные (${total - filled})` : "Отправить наряд ✓";
+  }
+}
+
+function acquireGeo() {
+  const btn = $("gps-btn");
+  if (!navigator.geolocation) { fieldToast("Геолокация не поддерживается", true); return; }
+  btn.disabled = true;
+  btn.textContent = "Определяю…";
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      _fieldState.geo = { lat: pos.coords.latitude, lon: pos.coords.longitude, acc: pos.coords.accuracy };
+      renderChecklistView(); // re-render to show fix
+      fieldToast("Координаты получены ✓");
+    },
+    (err) => {
+      btn.disabled = false;
+      btn.textContent = "Я на объекте";
+      fieldToast("Не удалось получить GPS: " + err.message, true);
+    },
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+  );
+}
+
+function photoTileHTML(kind, label) {
+  const photo = (_fieldState.photos || {})[kind];
+  return `<label class="photo-tile ${photo ? "has-photo" : ""}" data-kind="${kind}">
+    ${photo
+      ? `<img src="${API}${photo.url}" alt="${label}" />${photo.has_exif_gps ? `<div class="gps-badge">📍 ${parseFloat(photo.latitude).toFixed(3)},${parseFloat(photo.longitude).toFixed(3)}</div>` : ""}`
+      : `<div>
+          <div class="placeholder">📷</div>
+          <div class="placeholder-label">${label}</div>
+        </div>`}
+    <input type="file" accept="image/*" capture="environment" data-kind="${kind}" />
+  </label>`;
+}
+
+async function onPhotoChange(e) {
+  const inp = e.target;
+  const kind = inp.dataset.kind;
+  const file = inp.files?.[0];
+  if (!file) return;
+  const tile = inp.closest(".photo-tile");
+  tile.style.opacity = "0.4";
+  try {
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("kind", kind);
+    const token = localStorage.getItem(TOKEN_KEY);
+    const r = await fetch(`${API}/acts/${_fieldState.draft.id}/photos`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: fd,
+    });
+    if (!r.ok) throw new Error((await r.json()).detail || "upload failed");
+    const photo = await r.json();
+    _fieldState.photos = _fieldState.photos || {};
+    _fieldState.photos[kind] = photo;
+    // Перерисовать плитку
+    const tmp = document.createElement("div");
+    tmp.innerHTML = photoTileHTML(kind, kind === "before" ? "до" : kind === "after" ? "после" : "ещё");
+    tile.replaceWith(tmp.firstElementChild);
+    tmp.firstElementChild.querySelector("input").addEventListener("change", onPhotoChange);
+    fieldToast("Фото загружено ✓" + (photo.has_exif_gps ? " (GPS из EXIF)" : ""));
+  } catch (err) {
+    fieldToast("Ошибка: " + err.message, true);
+  } finally {
+    tile.style.opacity = "1";
+  }
+}
+
+async function submitAct() {
+  const tpl = _fieldState.template;
+  const total = (tpl.steps || []).length;
+  const filled = Object.values(_fieldState.responses || {}).filter((x) => x.passed != null).length;
+  if (filled < total) {
+    if (!confirm(`Заполнено ${filled} из ${total}. Всё равно отправить?`)) return;
+  }
+  if (!_fieldState.geo) {
+    if (!confirm("GPS не получен. Отправить без координат? (авто-проверка может не пройти)")) return;
+  }
+
+  const submitBtn = $("field-submit");
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = `<span class="spin"></span> Отправляем…`;
+
+  const responses = Object.entries(_fieldState.responses || {}).map(([stepId, r]) => ({
+    step_id: stepId,
+    value_bool: r.value_bool,
+    value_numeric: r.value_numeric,
+    value_text: r.value_text,
+    passed: r.passed,
+  }));
+
+  try {
+    const result = await api(`/acts/${_fieldState.draft.id}/submit`, {
+      method: "POST",
+      body: JSON.stringify({
+        actual_latitude: _fieldState.geo?.lat ?? 54.4,
+        actual_longitude: _fieldState.geo?.lon ?? 53.25,
+        actual_at: new Date().toISOString(),
+        responses,
+      }),
+    });
+    _fieldState.lastResult = result;
+    fieldGo("result");
+  } catch (err) {
+    fieldToast(err.message, true);
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Отправить наряд ✓";
+  }
+}
+
+function renderResultView() {
+  const r = _fieldState.lastResult;
+  $("field-title").innerHTML = `<small>${_fieldState.order.number}</small>Готово`;
+  const score = r.auto_check_score;
+  const passed = r.auto_check_passed;
+  const icon = passed ? "✓" : passed === false ? "✗" : "?";
+  const status = r.status;
+  const statusMeta = STATUS_META[status] || { bar: "gray", label: status };
+  $("field-body").innerHTML = `
+    <div class="welcome-block" style="text-align: center; padding: 30px 16px;">
+      <div style="font-size: 64px; line-height: 1; color: ${passed === true ? "var(--ok)" : passed === false ? "var(--bad)" : "var(--warn)"}">${icon}</div>
+      <div style="font-size: 20px; font-weight: 700; margin-top: 16px;">
+        ${passed === true ? "Авто-подтверждено" : passed === false ? "На ручной проверке" : "Отправлено"}
+      </div>
+      <div style="margin-top: 6px;">${fieldPill(status)}</div>
+      ${score != null ? `<div style="margin-top: 16px; font-family: var(--font-mono); font-size: 14px; color: var(--ink-3);">
+        Auto-score: <b style="color: var(--ink)">${(score * 100).toFixed(0)}%</b>
+      </div>` : ""}
+    </div>
+
+    <div class="field-bottom-bar">
+      <button class="big-btn btn-ghost" id="field-back-list">К списку</button>
+    </div>
+  `;
+  $("field-back-list").addEventListener("click", () => fieldGo("list"));
+}
+
+async function openAct(actId) {
+  const a = await api(`/acts/${actId}`);
+  fieldToast(`Акт: ${a.status}${a.auto_check_score != null ? " · " + (a.auto_check_score * 100).toFixed(0) + "%" : ""}`);
+}
 </script>
 </body>
 </html>

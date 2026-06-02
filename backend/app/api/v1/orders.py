@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import secrets
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -93,9 +93,30 @@ async def update_order(
 ):
     wo = await session.get(WorkOrder, order_id)
     if not wo:
-        raise HTTPException(404, "Наряд-заказ не найден")
+        raise HTTPException(404, "Наряд не найден")
     for k, v in body.model_dump(exclude_unset=True).items():
         setattr(wo, k, v)
+    await session.commit()
+    await session.refresh(wo)
+    return wo
+
+
+@router.post("/{order_id}/start", response_model=WorkOrderOut)
+async def start_order(
+    order_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
+):
+    """Подрядчик берёт наряд в работу: assigned → in_progress."""
+    wo = await session.get(WorkOrder, order_id)
+    if not wo:
+        raise HTTPException(404, "Наряд не найден")
+    if user.role == UserRole.CONTRACTOR and user.contractor_id and wo.contractor_id != user.contractor_id:
+        raise HTTPException(403, "Чужой наряд")
+    if wo.status not in (WorkOrderStatus.ASSIGNED,):
+        raise HTTPException(400, f"Наряд в статусе {wo.status.value}, нельзя взять в работу")
+    wo.status = WorkOrderStatus.IN_PROGRESS
+    wo.actual_start_at = datetime.now(timezone.utc)
     await session.commit()
     await session.refresh(wo)
     return wo
