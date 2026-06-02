@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>АСКК Татнефть — Дашборд (прототип)</title>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      --bg: #0f172a;
+      --panel: #1e293b;
+      --panel2: #334155;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #f59e0b;
+      --blue: #3b82f6;
+      --purple: #a855f7;
+    }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    header {
+      background: var(--panel);
+      padding: 16px 24px;
+      border-bottom: 1px solid #334155;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header h1 { margin: 0; font-size: 20px; font-weight: 600; }
+    header .meta { color: var(--muted); font-size: 13px; }
+    .container { padding: 24px; max-width: 1400px; margin: 0 auto; }
+    .grid { display: grid; gap: 16px; }
+    .g4 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+    .g2 { grid-template-columns: 2fr 1fr; }
+    .card {
+      background: var(--panel);
+      border-radius: 8px;
+      padding: 16px 20px;
+      border: 1px solid #334155;
+    }
+    .card h2 { margin: 0 0 12px; font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .kpi { font-size: 32px; font-weight: 700; }
+    .kpi-row { display: flex; align-items: baseline; gap: 8px; }
+    .kpi-sub { color: var(--muted); font-size: 13px; }
+    .kpi.green { color: var(--green); }
+    .kpi.red { color: var(--red); }
+    .kpi.yellow { color: var(--yellow); }
+    .kpi.blue { color: var(--blue); }
+    .kpi.purple { color: var(--purple); }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #334155; }
+    th { color: var(--muted); font-weight: 500; font-size: 12px; text-transform: uppercase; }
+    tr:hover { background: var(--panel2); }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .badge.green { background: rgba(34, 197, 94, 0.15); color: var(--green); }
+    .badge.red { background: rgba(239, 68, 68, 0.15); color: var(--red); }
+    .badge.yellow { background: rgba(245, 158, 11, 0.15); color: var(--yellow); }
+    .badge.blue { background: rgba(59, 130, 246, 0.15); color: var(--blue); }
+    .badge.gray { background: rgba(148, 163, 184, 0.15); color: var(--muted); }
+    .badge.purple { background: rgba(168, 85, 247, 0.15); color: var(--purple); }
+    .login-box {
+      max-width: 360px;
+      margin: 100px auto;
+      background: var(--panel);
+      padding: 32px;
+      border-radius: 12px;
+      border: 1px solid #334155;
+    }
+    .login-box h1 { margin: 0 0 24px; text-align: center; }
+    input, button {
+      width: 100%;
+      padding: 10px 14px;
+      margin-bottom: 12px;
+      border: 1px solid #334155;
+      background: var(--bg);
+      color: var(--text);
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    button {
+      background: var(--accent);
+      color: #0f172a;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+    }
+    button:hover { background: #0ea5e9; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .error { color: var(--red); font-size: 13px; margin-top: 8px; }
+    .logout { background: transparent; color: var(--muted); border: 1px solid #334155; padding: 6px 12px; font-size: 12px; }
+    .logout:hover { background: var(--panel2); color: var(--text); }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .empty { color: var(--muted); text-align: center; padding: 20px; }
+    code { background: var(--bg); padding: 2px 6px; border-radius: 3px; font-size: 12px; }
+    .pct-bar { background: var(--bg); height: 8px; border-radius: 4px; overflow: hidden; margin-top: 4px; }
+    .pct-bar > div { height: 100%; background: var(--green); }
+  </style>
+</head>
+<body>
+<div id="root">
+  <!-- Login screen -->
+  <div id="login" class="login-box" style="display:none">
+    <h1>АСКК Татнефть</h1>
+    <p style="color: var(--muted); text-align: center; margin-top: -16px; margin-bottom: 24px;">
+      Прототип демо-дашборда
+    </p>
+    <input id="email" type="email" placeholder="email" value="admin@tatneft.ru" autocomplete="email" />
+    <input id="password" type="password" placeholder="пароль" value="password" autocomplete="current-password" />
+    <button id="login-btn">Войти</button>
+    <div id="login-error" class="error"></div>
+    <p style="font-size: 12px; color: var(--muted); margin-top: 16px;">
+      Тестовые учётки: <code>admin@tatneft.ru</code> / <code>password</code><br/>
+      Другие: <code>manager@</code>, <code>tech@</code>, <code>master@</code>, <code>contractor_*@</code>
+    </p>
+  </div>
+
+  <!-- Main dashboard -->
+  <div id="app" style="display:none">
+    <header>
+      <div>
+        <h1>АСКК Татнефть — Дашборд</h1>
+        <div class="meta" id="who">…</div>
+      </div>
+      <div>
+        <a href="http://localhost:8000/docs" target="_blank" style="font-size: 13px; margin-right: 16px">API docs ↗</a>
+        <button class="logout" id="logout-btn">Выйти</button>
+      </div>
+    </header>
+
+    <div class="container">
+      <!-- KPI cards -->
+      <div class="grid g4" id="kpi-grid"></div>
+
+      <!-- Main grid -->
+      <div class="grid g2" style="margin-top: 24px">
+        <div class="card">
+          <h2>Последние наряды-заказы</h2>
+          <div id="recent-orders">…</div>
+        </div>
+        <div class="card">
+          <h2>Рейтинг подрядчиков</h2>
+          <div id="ranking">…</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top: 24px">
+        <h2>Акты по статусам (распределение)</h2>
+        <div id="acts-breakdown" class="grid g4">…</div>
+      </div>
+
+      <div class="card" style="margin-top: 24px; text-align: center; color: var(--muted); font-size: 13px;">
+        <p>
+          Это read-only прототип. Управление нарядами/актами — в
+          <a href="http://localhost:8000/docs" target="_blank">API docs</a>
+          или через <code>python scripts/demo.py</code>.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = "http://localhost:8000/api/v1";
+const TOKEN_KEY = "askk.token";
+const EMAIL_KEY = "askk.email";
+
+function $(id) { return document.getElementById(id); }
+
+function statusBadge(status) {
+  const map = {
+    draft: ["gray", "черновик"],
+    assigned: ["blue", "назначен"],
+    in_progress: ["yellow", "в работе"],
+    submitted: ["yellow", "на проверке"],
+    auto_confirmed: ["green", "авто ✓"],
+    confirmed: ["green", "подтверждён"],
+    verified: ["green", "верифицирован"],
+    rejected: ["red", "отклонён"],
+    delayed_verification: ["yellow", "отложен"],
+    issue_found: ["red", "дефект"],
+    cancelled: ["gray", "отменён"],
+  };
+  const [color, label] = map[status] || ["gray", status];
+  return `<span class="badge ${color}">${label}</span>`;
+}
+
+function fmtDate(s) {
+  if (!s) return "—";
+  const d = new Date(s);
+  return d.toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" });
+}
+
+async function api(path, opts = {}) {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const headers = { "Content-Type": "application/json", ...(opts.headers || {}) };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const r = await fetch(`${API}${path}`, { ...opts, headers });
+  if (r.status === 401) {
+    logout();
+    throw new Error("unauthorized");
+  }
+  if (!r.ok) {
+    const text = await r.text();
+    throw new Error(`HTTP ${r.status}: ${text}`);
+  }
+  return r.status === 204 ? null : r.json();
+}
+
+async function login() {
+  const email = $("email").value.trim();
+  const password = $("password").value;
+  $("login-btn").disabled = true;
+  $("login-error").textContent = "";
+  try {
+    const r = await fetch(`${API}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    if (!r.ok) {
+      const detail = await r.json();
+      $("login-error").textContent = detail.detail || "Ошибка входа";
+      return;
+    }
+    const data = await r.json();
+    localStorage.setItem(TOKEN_KEY, data.access_token);
+    localStorage.setItem(EMAIL_KEY, email);
+    showApp();
+  } catch (e) {
+    $("login-error").textContent = "Сеть недоступна: " + e.message;
+  } finally {
+    $("login-btn").disabled = false;
+  }
+}
+
+function logout() {
+  localStorage.removeItem(TOKEN_KEY);
+  showLogin();
+}
+
+function showLogin() {
+  $("login").style.display = "block";
+  $("app").style.display = "none";
+}
+
+function showApp() {
+  $("login").style.display = "none";
+  $("app").style.display = "block";
+  loadDashboard();
+}
+
+async function loadDashboard() {
+  const email = localStorage.getItem(EMAIL_KEY) || "";
+  $("who").textContent = email;
+
+  try {
+    const me = await api("/auth/me");
+    $("who").textContent = `${me.full_name} (${me.role}) — ${me.email}`;
+  } catch {}
+
+  try {
+    const summary = await api("/dashboard/summary");
+    renderKPI(summary);
+  } catch (e) {
+    $("kpi-grid").innerHTML = `<div class="card error">Ошибка загрузки сводки: ${e.message}</div>`;
+  }
+
+  try {
+    const orders = await api("/dashboard/orders/recent?limit=10");
+    renderOrders(orders);
+  } catch {}
+
+  try {
+    const ranking = await api("/dashboard/contractors/ranking");
+    renderRanking(ranking);
+  } catch {}
+
+  try {
+    const acts = await api("/acts?limit=100");
+    renderActsBreakdown(acts);
+  } catch {}
+}
+
+function renderKPI(s) {
+  const items = [
+    { v: s.total_work_orders, l: "Нарядов всего", c: "blue" },
+    { v: s.total_acts, l: "Актов всего", c: "purple" },
+    { v: s.auto_confirmed, l: "Авто-подтверждено", c: "green" },
+    { v: s.pending_review, l: "На проверке", c: "yellow" },
+    { v: s.rejected, l: "Отклонено", c: "red" },
+    {
+      v: `${Math.round(s.auto_confirmation_rate * 100)}%`,
+      l: "Доля авто-подтв.",
+      c: "green",
+      pct: s.auto_confirmation_rate,
+    },
+  ];
+  $("kpi-grid").innerHTML = items
+    .map(
+      (i) => `
+      <div class="card">
+        <h2>${i.l}</h2>
+        <div class="kpi-row">
+          <div class="kpi ${i.c}">${i.v}</div>
+        </div>
+        ${i.pct != null ? `<div class="pct-bar"><div style="width:${(i.pct * 100).toFixed(0)}%"></div></div>` : ""}
+      </div>`,
+    )
+    .join("");
+}
+
+function renderOrders(orders) {
+  if (!orders.length) {
+    $("recent-orders").innerHTML = `<div class="empty">Нет нарядов</div>`;
+    return;
+  }
+  $("recent-orders").innerHTML = `
+    <table>
+      <thead>
+        <tr><th>Номер</th><th>Статус</th><th>Создан</th></tr>
+      </thead>
+      <tbody>
+        ${orders
+          .map(
+            (o) => `
+          <tr>
+            <td><code>${o.number}</code></td>
+            <td>${statusBadge(o.status)}</td>
+            <td>${fmtDate(o.created_at)}</td>
+          </tr>`,
+          )
+          .join("")}
+      </tbody>
+    </table>`;
+}
+
+function renderRanking(contractors) {
+  if (!contractors.length) {
+    $("ranking").innerHTML = `<div class="empty">Нет данных</div>`;
+    return;
+  }
+  $("ranking").innerHTML = contractors
+    .map(
+      (c, i) => `
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom: 8px;">
+        <div style="width: 24px; color: var(--muted); text-align: right;">${i + 1}.</div>
+        <div style="flex: 1; font-size: 13px;">${c.name}</div>
+        <div style="font-weight: 600; color: var(--green); width: 50px; text-align: right;">${c.rating_score.toFixed(1)}</div>
+      </div>
+      <div class="pct-bar"><div style="width:${c.rating_score}%"></div></div>
+    `,
+    )
+    .join("");
+}
+
+function renderActsBreakdown(acts) {
+  const counts = {};
+  for (const a of acts) {
+    counts[a.status] = (counts[a.status] || 0) + 1;
+  }
+  const labels = Object.keys(counts);
+  if (!labels.length) {
+    $("acts-breakdown").innerHTML = `<div class="empty" style="grid-column: 1/-1">Нет актов</div>`;
+    return;
+  }
+  $("acts-breakdown").innerHTML = labels
+    .map(
+      (s) => `
+      <div class="card">
+        <h2>${s.replace(/_/g, " ")}</h2>
+        <div class="kpi">${counts[s]}</div>
+      </div>`,
+    )
+    .join("");
+}
+
+$("login-btn").addEventListener("click", login);
+$("logout-btn").addEventListener("click", logout);
+$("password").addEventListener("keypress", (e) => {
+  if (e.key === "Enter") login();
+});
+
+// Auto-login if token exists
+if (localStorage.getItem(TOKEN_KEY)) {
+  showApp();
+} else {
+  showLogin();
+}
+</script>
+</body>
+</html>
