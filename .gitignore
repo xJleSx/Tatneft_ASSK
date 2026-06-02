@@ -26,3 +26,6 @@ logs/*.py
 dist/
 build/
 *.log
+
+# Local photo storage (dev only)
+backend/app/photos_storage/

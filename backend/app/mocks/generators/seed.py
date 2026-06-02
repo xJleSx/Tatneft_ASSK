@@ -136,6 +136,22 @@ WORK_TYPES = [
             ("Фото после ТО", None, StepDataType.PHOTO, None, None, True),
         ],
     },
+    {
+        # Двухфазный сценарий: сначала диагностика, тип работ уточняется
+        # по результатам акта и выставляется отдельным нарядом.
+        "code": "DIAGNOSTIC",
+        "name": "Диагностика оборудования",
+        "category": WorkCategory.ROUTINE,
+        "duration": Decimal("2.0"),
+        "equipment": None,  # применимо ко всему
+        "steps": [
+            ("Внешний осмотр", None, StepDataType.BOOLEAN, None, None, True),
+            ("Замер ключевых параметров", None, StepDataType.NUMERIC,
+             {"nominal": 0.0, "tolerance": 0.0, "unit": "ед"}, None, True),
+            ("Фото общего вида", None, StepDataType.PHOTO, None, None, True),
+            ("Заключение о состоянии", "Описание дефектов и рекомендация", StepDataType.TEXT, None, None, True),
+        ],
+    },
 ]
 
 
@@ -269,7 +285,7 @@ async def seed_contractors(session: AsyncSession) -> list[Contractor]:
             contact_email=f"office@{name.split('«')[1].split('»')[0].lower().replace(' ', '')}.ru",
             contact_phone=f"+7{random.randint(9000000000, 9999999999)}",
             address=f"г. {random.choice(['Альметьевск', 'Бугульма', 'Лениногорск'])}, ул. Промышленная, {random.randint(1, 50)}",
-            specializations="TR-1,TO-USHGN,REPLACE-UECN,TO-WELLHEAD",
+            specializations="TR-1,TO-USHGN,REPLACE-UECN,TO-WELLHEAD,DIAGNOSTIC",
             is_active=True,
         )
         session.add(c)
@@ -435,6 +451,9 @@ async def seed_telemetry_history(session: AsyncSession, days: int = 3) -> int:
 
     Использует ту же детерминированную функцию, что и MockAsutpAdapter —
     чтобы графики в дашборде выглядели «реалистично».
+
+    Дополнительно инжектирует 1-2 аномалии в последние 24ч на конкретных
+    установках, чтобы детектор нашёл их при первом запуске.
     """
     from app.integrations.asutp.mock import _generate_params
 
@@ -456,14 +475,45 @@ async def seed_telemetry_history(session: AsyncSession, days: int = 3) -> int:
     batch: list[TelemetryReading] = []
 
     eq_types = {e.id: e.type for e in equipment_list}
+
+    # === ИНЪЕКЦИЯ АНОМАЛИЙ (для демо детектора) ===
+    # Берём первые установки подходящего типа и «ломаем» их в последние сутки.
+    # Множители подобраны так, чтобы пороги детектора (0.80/0.55) сработали
+    # надёжно поверх ±2% шума.
+    anomaly_targets: dict[UUID, dict[str, float]] = {}
+    # 1) UECN: -50% дебит (warning), 2) UECN: -70% дебит (critical),
+    # 3) USHGN: -50% дебит, 4) UECN: +50% ток
+    targets_needed = [
+        ("uecn", "Q_liq", 0.50),
+        ("uecn", "Q_liq", 0.30),  # critical
+        ("ushgn", "Q_liq", 0.50),
+        ("uecn", "I", 1.50),
+    ]
+    for want_type, param, mult in targets_needed:
+        for eq in equipment_list:
+            if eq.id in anomaly_targets:
+                continue
+            t = eq.type.value if eq.type else ""
+            if t == want_type:
+                anomaly_targets[eq.id] = {param: mult}
+                break
+
+    anomaly_from = now - timedelta(hours=24)
+
     cur = start
     while cur <= now:
+        in_anom_window = cur >= anomaly_from
         for eq_id, eq_type in eq_types.items():
             # стабильный seed: equipment_id + minute bucket
             import hashlib
             bucket = int(cur.timestamp()) // 60
             seed = int(hashlib.sha256(f"{eq_id}:{bucket}".encode()).hexdigest(), 16) % (2**32)
             params = _generate_params(eq_type, seed)
+            # Применяем аномалию
+            if in_anom_window and eq_id in anomaly_targets:
+                for p, mult in anomaly_targets[eq_id].items():
+                    if p in params:
+                        params[p] = round(params[p] * mult, 3)
             batch.append(
                 TelemetryReading(
                     equipment_id=eq_id,
@@ -484,6 +534,8 @@ async def seed_telemetry_history(session: AsyncSession, days: int = 3) -> int:
         session.add_all(batch)
         await session.flush()
     await session.commit()
+    if anomaly_targets:
+        log.info("seeded_telemetry_anomalies", equipment=len(anomaly_targets))
     log.info("seeded_telemetry", points=inserted, days=days, equipment=len(equipment_list))
     return inserted
 
