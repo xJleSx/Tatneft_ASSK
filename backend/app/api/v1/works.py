@@ -48,15 +48,6 @@ async def get_template(
     )
     if not tpl:
         return {"steps": []}
-    # Явная загрузка шагов (lazy="noload" на relationship)
-    from app.models.work import ChecklistStep
-    steps_rows = (
-        await session.scalars(
-            select(ChecklistStep)
-            .where(ChecklistStep.template_id == tpl.id)
-            .order_by(ChecklistStep.order_index)
-        )
-    ).all()
     steps = [
         {
             "id": str(s.id),
@@ -68,6 +59,6 @@ async def get_template(
             "norm_json": s.norm_json,
             "telemetry_param": s.telemetry_param,
         }
-        for s in steps_rows
+        for s in sorted(tpl.steps, key=lambda x: x.order_index)
     ]
     return {"template_id": str(tpl.id), "version": tpl.version, "steps": steps}

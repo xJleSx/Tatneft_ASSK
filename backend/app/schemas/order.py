@@ -9,21 +9,18 @@ from uuid import UUID
 from pydantic import ConfigDict, Field
 
 from app.models.act import ActStatus
-from app.models.order import WorkOrderPriority, WorkOrderStatus
+from app.models.order import WorkOrderStatus
 from app.schemas.common import ORMModel
 
 
 class WorkOrderBase(ORMModel):
     object_id: UUID
-    work_type_id: UUID | None = None
+    work_type_id: UUID
     contractor_id: UUID | None = None
-    priority: WorkOrderPriority = WorkOrderPriority.NORMAL
     planned_start_at: datetime | None = None
     planned_end_at: datetime | None = None
     planned_cost: Decimal | None = None
     description: str | None = None
-    defect_ref: str | None = None
-    is_diagnostic: bool = False
 
 
 class WorkOrderCreate(WorkOrderBase):
@@ -32,9 +29,7 @@ class WorkOrderCreate(WorkOrderBase):
 
 class WorkOrderUpdate(ORMModel):
     contractor_id: UUID | None = None
-    work_type_id: UUID | None = None
     status: WorkOrderStatus | None = None
-    priority: WorkOrderPriority | None = None
     planned_start_at: datetime | None = None
     planned_end_at: datetime | None = None
     actual_start_at: datetime | None = None
@@ -43,8 +38,6 @@ class WorkOrderUpdate(ORMModel):
     actual_cost: Decimal | None = None
     description: str | None = None
     rejection_reason: str | None = None
-    defect_ref: str | None = None
-    is_diagnostic: bool | None = None
 
 
 class WorkOrderOut(WorkOrderBase):
