@@ -28,4 +28,4 @@ build/
 *.log
 
 # Local photo storage (dev only)
-backend/photos_storage/
+backend/app/photos_storage/

@@ -72,10 +72,13 @@ async def create_order(
         object_id=body.object_id,
         work_type_id=body.work_type_id,
         contractor_id=body.contractor_id,
+        priority=body.priority,
         planned_start_at=body.planned_start_at,
         planned_end_at=body.planned_end_at,
         planned_cost=body.planned_cost,
         description=body.description,
+        defect_ref=body.defect_ref,
+        is_diagnostic=body.is_diagnostic,
         status=WorkOrderStatus.ASSIGNED if body.contractor_id else WorkOrderStatus.DRAFT,
     )
     session.add(wo)
