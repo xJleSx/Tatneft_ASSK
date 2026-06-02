@@ -35,7 +35,7 @@ class AutoCheckResult:
     failed_rules: list[str] = field(default_factory=list)
 
 
-async def auto_check_act(session: AsyncSession, act: Act) -> AutoCheckResult:
+async def auto_check_act(session: AsyncSession, act: Act, work_order=None) -> AutoCheckResult:
     failed: list[str] = []
     details: dict[str, Any] = {}
     weights: list[tuple[float, bool, str]] = []  # (weight, passed, rule_name)
@@ -110,7 +110,12 @@ async def auto_check_act(session: AsyncSession, act: Act) -> AutoCheckResult:
 
     # 2) Гео-проверка
     from app.models.object import Object  # локальный импорт чтобы избежать цикла
-    obj = await session.scalar(select(Object).where(Object.id == act.work_order.object_id))
+    # work_order может быть передан явно (lazy="noload" на relationship)
+    wo = work_order or act.work_order
+    if wo is None:
+        from app.models.order import WorkOrder
+        wo = await session.get(WorkOrder, act.work_order_id)
+    obj = await session.scalar(select(Object).where(Object.id == wo.object_id))
     if obj and obj.latitude and obj.longitude and act.actual_latitude and act.actual_longitude:
         geo = check_geo(
             float(obj.latitude), float(obj.longitude),

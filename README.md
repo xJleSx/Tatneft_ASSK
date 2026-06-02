@@ -93,11 +93,38 @@ curl -X POST http://localhost:8000/api/v1/auth/login \
 
 | Роль | Email |
 |------|-------|
-| admin | admin@tatneft.local |
-| manager | manager@tatneft.local |
-| technologist | tech@tatneft.local |
-| master | master@tatneft.local |
+| admin | admin@tatneft.ru |
+| manager | manager@tatneft.ru |
+| technologist | tech@tatneft.ru |
+| master | master@tatneft.ru |
 | contractor | contractor_{inn}@example.ru |
+
+### 6) Демо-скрипт (E2E)
+
+Симулирует полный цикл: создание наряда → заполнение чек-листа подрядчиком →
+submit → авто-проверка (Rule Engine) → ручная верификация мастером.
+
+```bash
+python scripts/demo.py
+```
+
+Скрипт печатает статусы наряда/акта на каждом шаге, в т.ч. итоговый `auto_check_score`
+и финальный статус.
+
+### 7) Дашборд
+
+Read-only UI на vanilla JS. После того, как API поднят и засеян:
+
+```bash
+python -m http.server 5500 --bind 127.0.0.1 --directory frontend
+```
+
+Открыть в браузере: http://127.0.0.1:5500/
+
+Логин: `admin@tatneft.ru` / `password` (или `manager`, `tech`, `master`, `contractor_*`).
+
+Дашборд показывает: KPI сводку, последние наряды, рейтинг подрядчиков,
+распределение актов по статусам.
 
 ## Ключевые эндпоинты
 

@@ -1,6 +1,7 @@
 """Work orders (наряды-заказы)."""
 from __future__ import annotations
 
+import secrets
 from datetime import datetime
 from uuid import UUID
 
@@ -18,7 +19,9 @@ router = APIRouter(prefix="/orders", tags=["orders"])
 
 
 def _gen_number() -> str:
-    return f"WO-{datetime.utcnow().strftime('%Y%m%d')}-{UUID(int=0).hex[:6].upper()}"
+    # 6 hex символов из secrets — гарантированно уникально в пределах дня
+    suffix = secrets.token_hex(3).upper()
+    return f"WO-{datetime.utcnow().strftime('%Y%m%d')}-{suffix}"
 
 
 @router.get("/", response_model=list[WorkOrderOut])
