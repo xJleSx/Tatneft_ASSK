@@ -137,7 +137,7 @@ async def submit_act(
     # 5) Запускаем авто-проверку
     from app.services.rules import auto_check_act
 
-    result = await auto_check_act(session, act)
+    result = await auto_check_act(session, act, work_order=wo)
     act.auto_check_passed = result.passed
     act.auto_check_score = result.score
     act.auto_check_details = result.details
