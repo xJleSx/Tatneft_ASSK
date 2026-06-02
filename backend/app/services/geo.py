@@ -31,5 +31,7 @@ def check_geo(
     """Возвращает None если у объекта нет геопривязки (проверка невозможна)."""
     if None in (obj_lat, obj_lon, actual_lat, actual_lon):
         return None
-    d = haversine_m(float(obj_lat), float(obj_lon), float(actual_lat), float(actual_lon))
+    assert obj_lat is not None and obj_lon is not None
+    assert actual_lat is not None and actual_lon is not None
+    d = haversine_m(obj_lat, obj_lon, actual_lat, actual_lon)
     return GeoResult(distance_m=d, in_radius=d <= radius_m)

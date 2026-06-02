@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.models.act import Act, ChecklistResponse
+from app.models.order import WorkOrder
 from app.models.photo import Photo, PhotoKind
 from app.models.work import ChecklistStep, StepDataType
 from app.services.geo import check_geo
@@ -36,7 +37,9 @@ class AutoCheckResult:
     failed_rules: list[str] = field(default_factory=list)
 
 
-async def auto_check_act(session: AsyncSession, act: Act, work_order=None) -> AutoCheckResult:
+async def auto_check_act(
+    session: AsyncSession, act: Act, work_order: WorkOrder | None = None
+) -> AutoCheckResult:
     failed: list[str] = []
     details: dict[str, Any] = {}
     weights: list[tuple[float, bool, str]] = []  # (weight, passed, rule_name)
@@ -115,11 +118,11 @@ async def auto_check_act(session: AsyncSession, act: Act, work_order=None) -> Au
     from app.models.object import Object  # локальный импорт чтобы избежать цикла
 
     # work_order может быть передан явно (lazy="noload" на relationship)
-    wo = work_order or act.work_order
+    wo: WorkOrder | None = work_order or act.work_order
     if wo is None:
-        from app.models.order import WorkOrder
-
         wo = await session.get(WorkOrder, act.work_order_id)
+    if wo is None:
+        return AutoCheckResult(passed=False, score=0.0, failed_rules=["work_order_missing"])
     obj = await session.scalar(select(Object).where(Object.id == wo.object_id))
     if obj and obj.latitude and obj.longitude and act.actual_latitude and act.actual_longitude:
         geo = check_geo(

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from typing import Annotated
 from uuid import UUID
 
@@ -45,7 +46,7 @@ async def get_current_user(
     return user
 
 
-def require_roles(*allowed: UserRole):
+def require_roles(*allowed: UserRole) -> Callable[..., Awaitable[User]]:
     """Зависимость-фабрика для проверки роли."""
 
     async def _checker(

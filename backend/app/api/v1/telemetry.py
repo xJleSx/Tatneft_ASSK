@@ -22,7 +22,7 @@ router = APIRouter(prefix="/telemetry", tags=["telemetry"])
 async def snapshot(
     equipment_id: UUID,
     _: User = Depends(get_current_user),
-):
+) -> dict:
     """Снимок параметров сейчас (мок)."""
     return await get_asutp_adapter().get_snapshot(equipment_id)
 
@@ -33,7 +33,7 @@ async def history(
     hours: int = 24,
     session: AsyncSession = Depends(get_session),
     _: User = Depends(get_current_user),
-):
+) -> list[dict]:
     """История из БД (накопленная при опросе)."""
     since = datetime.now(UTC) - timedelta(hours=hours)
     rows = (

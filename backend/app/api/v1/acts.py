@@ -6,13 +6,15 @@ import hashlib
 import json
 import os
 import secrets as _secrets
+from contextlib import suppress
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, require_roles
@@ -35,7 +37,7 @@ async def list_acts(
     limit: int = 100,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(get_current_user),
-):
+) -> list[Act]:
     q = select(Act).order_by(Act.created_at.desc()).limit(limit)
     if work_order_id:
         q = q.where(Act.work_order_id == work_order_id)
@@ -43,7 +45,7 @@ async def list_acts(
         q = q.where(Act.status == status)
     if user.role == UserRole.CONTRACTOR:
         q = q.where(Act.contractor_user_id == user.id)
-    return (await session.scalars(q)).all()
+    return list((await session.scalars(q)).all())
 
 
 @router.get("/{act_id}", response_model=dict)
@@ -51,7 +53,7 @@ async def get_act_detail(
     act_id: UUID,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(get_current_user),
-):
+) -> dict:
     """Акт целиком: сам акт + ответы чек-листа + фото + наряд."""
     act = await session.get(Act, act_id)
     if not act:
@@ -67,9 +69,7 @@ async def get_act_detail(
             select(Photo).where(Photo.act_id == act_id).order_by(Photo.created_at)
         )
     ).all()
-    wo = await session.get(
-        __import__("app.models.order", fromlist=["WorkOrder"]).WorkOrder, act.work_order_id
-    )
+    wo = await session.get(WorkOrder, act.work_order_id)
 
     return {
         "id": str(act.id),
@@ -133,7 +133,7 @@ async def create_draft_act(
     body: ActCreate,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_roles(UserRole.CONTRACTOR, UserRole.MASTER, UserRole.ADMIN)),
-):
+) -> Act:
     wo = await session.get(WorkOrder, body.work_order_id)
     if not wo:
         raise HTTPException(404, "Наряд-заказ не найден")
@@ -174,7 +174,7 @@ async def submit_act(
     body: ActSubmit,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_roles(UserRole.CONTRACTOR, UserRole.MASTER, UserRole.ADMIN)),
-):
+) -> Act:
     act = await session.get(Act, act_id)
     if not act:
         raise HTTPException(404, "Акт не найден")
@@ -182,9 +182,7 @@ async def submit_act(
         raise HTTPException(400, f"Акт в статусе {act.status.value}, нельзя подписать")
 
     # 1) Сохраняем ответы чек-листа
-    await session.execute(
-        ChecklistResponse.__table__.delete().where(ChecklistResponse.act_id == act.id)
-    )
+    await session.execute(delete(ChecklistResponse).where(ChecklistResponse.act_id == act.id))
     for r in body.responses:
         session.add(ChecklistResponse(act_id=act.id, **r.model_dump()))
 
@@ -195,6 +193,8 @@ async def submit_act(
 
     # 3) Снимок телеметрии equipment объекта
     wo = await session.get(WorkOrder, act.work_order_id)
+    if wo is None:
+        raise HTTPException(404, "Наряд-заказ не найден")
     equipment_list = (
         await session.scalars(select(Equipment).where(Equipment.object_id == wo.object_id))
     ).all()
@@ -254,7 +254,7 @@ def _exif_gps_and_dt(raw: bytes) -> tuple[dict | None, datetime | None]:
         from PIL import Image
 
         img = Image.open(io.BytesIO(raw))
-        exif = img._getexif() or {}
+        exif: Any = img.getexif() or {}
     except Exception:
         return None, None
 
@@ -265,10 +265,8 @@ def _exif_gps_and_dt(raw: bytes) -> tuple[dict | None, datetime | None]:
     taken_at = None
     dt_str = exif.get(36867) or exif.get(306)  # DateTimeOriginal, DateTime
     if dt_str and isinstance(dt_str, str):
-        try:
+        with suppress(ValueError):
             taken_at = datetime.strptime(dt_str, "%Y:%m:%d %H:%M:%S").replace(tzinfo=UTC)
-        except ValueError:
-            pass
 
     # GPS
     gps_info = exif.get(34853)
@@ -310,7 +308,7 @@ async def upload_photo(
     kind: str = Form("other"),
     session: AsyncSession = Depends(get_session),
     user: User = Depends(get_current_user),
-):
+) -> dict:
     """Загрузка фото к акту. Извлекает EXIF GPS и время съёмки (anti-fraud)."""
     act = await session.get(Act, act_id)
     if not act:
@@ -372,7 +370,7 @@ async def get_photo(
     photo_id: UUID,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(get_current_user),
-):
+) -> FileResponse:
     """Отдать бинарь фото (для отображения в UI)."""
     photo = await session.get(Photo, photo_id)
     if not photo:
@@ -390,12 +388,14 @@ async def review_act(
     user: User = Depends(
         require_roles(UserRole.MASTER, UserRole.TECHNOLOGIST, UserRole.MANAGER, UserRole.ADMIN)
     ),
-):
+) -> Act:
     act = await session.get(Act, act_id)
     if not act:
         raise HTTPException(404, "Акт не найден")
 
     wo = await session.get(WorkOrder, act.work_order_id)
+    if wo is None:
+        raise HTTPException(404, "Наряд-заказ не найден")
     act.confirmed_by_user_id = user.id
     act.confirmed_at = datetime.now(UTC)
     act.reviewer_comment = body.comment

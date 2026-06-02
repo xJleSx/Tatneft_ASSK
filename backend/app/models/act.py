@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import enum
+from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
@@ -62,7 +63,7 @@ class Act(UUIDPKMixin, TimestampMixin, Base):
     # Фактические гео и время (для anti-fraud)
     actual_latitude: Mapped[Decimal | None] = mapped_column(Numeric(9, 6))
     actual_longitude: Mapped[Decimal | None] = mapped_column(Numeric(9, 6))
-    actual_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True))
+    actual_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # Снимок телеметрии equipment на момент подачи акта
     telemetry_before_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
@@ -79,7 +80,7 @@ class Act(UUIDPKMixin, TimestampMixin, Base):
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
     )
-    confirmed_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True))
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     reviewer_comment: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     work_order = relationship("WorkOrder", back_populates="acts", lazy="noload")

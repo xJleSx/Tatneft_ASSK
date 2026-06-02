@@ -37,8 +37,9 @@ async def authenticate(session: AsyncSession, email: str, password: str) -> User
 
 def issue_tokens(user: User) -> TokenResponse:
     extra = {"role": user.role.value}
-    access = create_access_token(user.id, extra=extra)
-    refresh = create_refresh_token(user.id)
+    user_id_str = str(user.id)
+    access = create_access_token(user_id_str, extra=extra)
+    refresh = create_refresh_token(user_id_str)
     return TokenResponse(
         access_token=access,
         refresh_token=refresh,

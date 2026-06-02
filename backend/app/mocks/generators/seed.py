@@ -16,7 +16,7 @@ from __future__ import annotations
 import random
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
-from typing import Any
+from typing import Any, TypedDict
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -43,6 +43,19 @@ from app.models.work import (
 log = get_logger(__name__)
 
 
+# Шаг чек-листа: (title, description, data_type, norm, telemetry_param, required)
+StepT = tuple[str, str | None, StepDataType, dict[str, Any] | None, str | None, bool]
+
+
+class WorkTypeDataT(TypedDict):
+    code: str
+    name: str
+    category: WorkCategory
+    duration: Decimal
+    equipment: EquipmentType | None
+    steps: list[StepT]
+
+
 # Привязка к месторождениям Татарстана (примерные координаты кустов)
 WELL_CLUSTERS = [
     ("Ромашкинское", Decimal("54.5833"), Decimal("51.7833")),
@@ -62,7 +75,7 @@ CONTRACTOR_NAMES = [
 ]
 
 # Типовые виды работ (на основе ТР-РД 153-112-017 и аналогов)
-WORK_TYPES = [
+WORK_TYPES: list[WorkTypeDataT] = [
     {
         "code": "TR-1",
         "name": "Текущий ремонт скважины (ТР-1)",
@@ -744,7 +757,7 @@ async def seed_work_orders_and_acts(
         rejection_comment: str | None = None,
         reviewer_comment: str | None = None,
     ) -> Act | None:
-        cu = contractor_users.get(wo.contractor_id)
+        cu = contractor_users.get(wo.contractor_id) if wo.contractor_id else None
         if not cu:
             return None
 

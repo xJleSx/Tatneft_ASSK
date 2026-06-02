@@ -34,7 +34,7 @@ async def list_orders(
     offset: int = 0,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(get_current_user),
-):
+) -> list[WorkOrder]:
     q = select(WorkOrder).order_by(WorkOrder.created_at.desc()).limit(limit).offset(offset)
     if status:
         q = q.where(WorkOrder.status == status)
@@ -45,7 +45,7 @@ async def list_orders(
     if user.role == UserRole.CONTRACTOR and user.contractor_id:
         q = q.where(WorkOrder.contractor_id == user.contractor_id)
     rows = (await session.scalars(q)).all()
-    return rows
+    return list(rows)
 
 
 @router.get("/{order_id}", response_model=WorkOrderOut)
@@ -53,7 +53,7 @@ async def get_order(
     order_id: UUID,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(get_current_user),
-):
+) -> WorkOrder:
     wo = await session.get(WorkOrder, order_id)
     if not wo:
         raise HTTPException(404, "Наряд не найден")
@@ -71,7 +71,7 @@ async def create_order(
     body: WorkOrderCreate,
     session: AsyncSession = Depends(get_session),
     _: User = Depends(require_roles(UserRole.MANAGER, UserRole.ADMIN)),
-):
+) -> WorkOrder:
     wo = WorkOrder(
         number=_gen_number(),
         object_id=body.object_id,
@@ -98,7 +98,7 @@ async def update_order(
     body: WorkOrderUpdate,
     session: AsyncSession = Depends(get_session),
     _: User = Depends(require_roles(UserRole.MANAGER, UserRole.ADMIN)),
-):
+) -> WorkOrder:
     wo = await session.get(WorkOrder, order_id)
     if not wo:
         raise HTTPException(404, "Наряд не найден")
@@ -114,7 +114,7 @@ async def start_order(
     order_id: UUID,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(get_current_user),
-):
+) -> WorkOrder:
     """Подрядчик берёт наряд в работу: assigned → in_progress."""
     wo = await session.get(WorkOrder, order_id)
     if not wo:

@@ -1,10 +1,25 @@
 """Конфигурация приложения."""
 
+from __future__ import annotations
+
+import logging
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+log = logging.getLogger(__name__)
+
+# Значения, которые НЕЛЬЗЯ использовать в не-dev окружениях.
+# В проде SECRET_KEY должен приходить из .env / секрет-стора.
+_FORBIDDEN_SECRETS = frozenset(
+    {
+        "dev-only-do-not-use-in-prod",
+        "change-me-in-prod-very-long-random-string-please",
+        "",
+    }
+)
 
 
 class Settings(BaseSettings):
@@ -55,6 +70,44 @@ class Settings(BaseSettings):
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @model_validator(mode="after")
+    def _validate_prod_safety(self) -> Settings:
+        """Строгие проверки для не-dev окружений."""
+        if self.app_env == "dev":
+            return self
+
+        # 1) SECRET_KEY: не placeholder, >= 32 символов
+        if self.secret_key in _FORBIDDEN_SECRETS:
+            raise ValueError(
+                f"app_env={self.app_env}: SECRET_KEY is a known placeholder. "
+                "Set a strong random value (>=32 chars) via environment or .env"
+            )
+        if len(self.secret_key) < 32:
+            raise ValueError(
+                f"app_env={self.app_env}: SECRET_KEY must be at least 32 chars "
+                f"(got {len(self.secret_key)})"
+            )
+
+        # 2) CORS: в проде запрещены wildcard и http://
+        origins = self.cors_origins_list
+        if "*" in origins:
+            raise ValueError(
+                f"app_env={self.app_env}: CORS_ORIGINS must not contain '*' (CORS spec "
+                "disallows wildcard with credentials)"
+            )
+        for o in origins:
+            if o.startswith("http://") and not o.startswith("http://localhost"):
+                raise ValueError(
+                    f"app_env={self.app_env}: CORS origin {o!r} uses http://; "
+                    "production must use https://"
+                )
+
+        # 3) DEBUG должен быть выключен
+        if self.debug:
+            log.warning("app_env=%s but DEBUG=true — disabling", self.app_env)
+            self.debug = False
+        return self
 
 
 @lru_cache
