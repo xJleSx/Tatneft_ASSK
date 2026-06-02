@@ -5,6 +5,7 @@
 - Объекты — это узлы дерева, к ним привязаны наряды-заказы.
 - Геолокация хранится на любом уровне (для проверки присутствия в радиусе).
 """
+
 from __future__ import annotations
 
 import enum
@@ -20,7 +21,7 @@ from app.db.base import Base, TimestampMixin, UUIDPKMixin
 
 class ObjectKind(str, enum.Enum):
     CLUSTER = "cluster"  # куст
-    WELL = "well"        # скважина
+    WELL = "well"  # скважина
     FACILITY = "facility"  # прочее (насосная, КНС и т.п.)
 
 
@@ -52,6 +53,6 @@ class Object(UUIDPKMixin, TimestampMixin, Base):
     )
 
     parent = relationship("Object", remote_side="Object.id", lazy="noload")
-    children = relationship("Object", lazy="noload")
+    children = relationship("Object", lazy="noload", overlaps="parent")
     equipment = relationship("Equipment", back_populates="object", lazy="noload")
     work_orders = relationship("WorkOrder", back_populates="object", lazy="noload")

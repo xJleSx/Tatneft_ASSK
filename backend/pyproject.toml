@@ -72,16 +72,8 @@ indent-style = "space"
 [tool.black]
 line-length = 100
 target-version = ["py311"]
-include = "\.pyi?$"
-exclude = """
-/(
-    \.git
-  | \.venv
-  | build
-  | dist
-  | alembic
-)/
-"""
+include = '\.pyi?$'
+extend-exclude = '''/(\.git|\.venv|venv|build|dist|alembic)/'''
 
 [tool.mypy]
 python_version = "3.11"

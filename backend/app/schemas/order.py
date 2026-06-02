@@ -1,4 +1,5 @@
 """Схемы нарядов-заказов и актов."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -53,13 +54,14 @@ class WorkOrderOut(WorkOrderBase):
     id: UUID
     number: str
     status: WorkOrderStatus
-    actual_start_at: datetime | None
-    actual_end_at: datetime | None
-    actual_cost: Decimal | None
+    actual_start_at: datetime | None = None
+    actual_end_at: datetime | None = None
+    actual_cost: Decimal | None = None
     created_at: datetime
 
 
 # --- Act ---
+
 
 class ChecklistResponseIn(ORMModel):
     step_id: UUID
