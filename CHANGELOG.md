@@ -56,7 +56,3 @@ python scripts/test_anomaly_flow.py
 - создан наряд `WO-YYYYMMDD-XXXXXX`, status=assigned, priority=critical, is_diagnostic=True, defect_ref=`DF-ANOM-...`
 - подрядчик берёт в работу → status=in_progress
 - акт создан и подан, auto_check_score вычислен
-
-## ⚠️ Напоминание про безопасность
-
-**6+ GitHub PAT всё ещё лежат в чате.** Отзови на https://github.com/settings/tokens — это **твои токены**, и я не могу их отозвать за тебя.
