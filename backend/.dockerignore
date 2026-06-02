@@ -1,0 +1,65 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+*.egg
+.pyre/
+.dmypy.json
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+.tox/
+.nox/
+
+# Virtualenvs
+.venv/
+venv/
+env/
+ENV/
+
+# Build / dist
+build/
+dist/
+wheels/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# VCS
+.git/
+.gitignore
+.gitattributes
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project
+*.log
+local_data/
+uploads/
+minio_data/
+pgdata/
+logs/
+photos_storage/
+
+# Tests / docs (not needed in image)
+tests/
+README.md
+docs/
+.pyright/
