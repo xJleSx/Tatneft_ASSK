@@ -11,10 +11,11 @@ from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import DateTime, Enum, ForeignKey, Index, String
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, UUIDPKMixin
+from app.db.types import JSONBCompat
 
 
 class TelemetryKind(str, enum.Enum):
@@ -43,7 +44,7 @@ class TelemetryReading(UUIDPKMixin, Base):
     )
 
     # Произвольный набор параметров: {"P_buf": 12.3, "Q_liq": 80, "I": 45, ...}
-    params: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    params: Mapped[dict] = mapped_column(JSONBCompat, nullable=False)
 
     # Источник: имя адаптера/системы
     source: Mapped[str] = mapped_column(String(64), nullable=False, default="mock")

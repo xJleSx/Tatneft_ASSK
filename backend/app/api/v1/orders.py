@@ -6,7 +6,7 @@ import secrets
 from datetime import UTC, datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +15,7 @@ from app.db.session import get_session
 from app.models.order import WorkOrder, WorkOrderStatus, assert_transition
 from app.models.user import User, UserRole
 from app.schemas.order import WorkOrderCreate, WorkOrderOut, WorkOrderUpdate
+from app.services.audit import audit
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
@@ -22,7 +23,7 @@ router = APIRouter(prefix="/orders", tags=["orders"])
 def _gen_number() -> str:
     # 6 hex символов из secrets — гарантированно уникально в пределах дня
     suffix = secrets.token_hex(3).upper()
-    return f"WO-{datetime.utcnow().strftime('%Y%m%d')}-{suffix}"
+    return f"WO-{datetime.now(UTC).strftime('%Y%m%d')}-{suffix}"
 
 
 @router.get("/", response_model=list[WorkOrderOut])
@@ -69,8 +70,9 @@ async def get_order(
 @router.post("/", response_model=WorkOrderOut, status_code=201)
 async def create_order(
     body: WorkOrderCreate,
+    request: Request,
     session: AsyncSession = Depends(get_session),
-    _: User = Depends(require_roles(UserRole.MANAGER, UserRole.ADMIN)),
+    user: User = Depends(require_roles(UserRole.MANAGER, UserRole.ADMIN)),
 ) -> WorkOrder:
     wo = WorkOrder(
         number=_gen_number(),
@@ -87,6 +89,21 @@ async def create_order(
         status=WorkOrderStatus.ASSIGNED if body.contractor_id else WorkOrderStatus.DRAFT,
     )
     session.add(wo)
+    await session.flush()
+    audit(
+        session,
+        action="order.create",
+        user_id=user.id,
+        entity_type="work_order",
+        entity_id=wo.id,
+        request=request,
+        details={
+            "number": wo.number,
+            "contractor_id": str(wo.contractor_id) if wo.contractor_id else None,
+            "priority": wo.priority.value,
+            "is_diagnostic": wo.is_diagnostic,
+        },
+    )
     await session.commit()
     await session.refresh(wo)
     return wo
@@ -96,21 +113,37 @@ async def create_order(
 async def update_order(
     order_id: UUID,
     body: WorkOrderUpdate,
+    request: Request,
     session: AsyncSession = Depends(get_session),
-    _: User = Depends(require_roles(UserRole.MANAGER, UserRole.ADMIN)),
+    user: User = Depends(require_roles(UserRole.MANAGER, UserRole.ADMIN)),
 ) -> WorkOrder:
     wo = await session.get(WorkOrder, order_id)
     if not wo:
         raise HTTPException(404, "Наряд не найден")
     data = body.model_dump(exclude_unset=True)
+    old_status = wo.status
     new_status = data.get("status")
-    if new_status is not None and new_status != wo.status:
+    if new_status is not None and new_status != old_status:
         try:
-            assert_transition(wo.status, new_status)
+            assert_transition(old_status, new_status)
         except ValueError as e:
             raise HTTPException(400, str(e)) from e
     for k, v in data.items():
         setattr(wo, k, v)
+    await session.flush()
+    details: dict = {k: str(v) for k, v in data.items() if k != "description"}
+    if new_status is not None and new_status != old_status:
+        details["status_from"] = old_status.value
+        details["status_to"] = new_status.value
+    audit(
+        session,
+        action="order.update",
+        user_id=user.id,
+        entity_type="work_order",
+        entity_id=wo.id,
+        request=request,
+        details=details or None,
+    )
     await session.commit()
     await session.refresh(wo)
     return wo
@@ -119,6 +152,7 @@ async def update_order(
 @router.post("/{order_id}/start", response_model=WorkOrderOut)
 async def start_order(
     order_id: UUID,
+    request: Request,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(get_current_user),
 ) -> WorkOrder:
@@ -138,6 +172,16 @@ async def start_order(
         raise HTTPException(400, str(e)) from e
     wo.status = WorkOrderStatus.IN_PROGRESS
     wo.actual_start_at = datetime.now(UTC)
+    await session.flush()
+    audit(
+        session,
+        action="order.start",
+        user_id=user.id,
+        entity_type="work_order",
+        entity_id=wo.id,
+        request=request,
+        details={"number": wo.number},
+    )
     await session.commit()
     await session.refresh(wo)
     return wo

@@ -11,6 +11,7 @@ from app.db.session import get_session
 from app.mocks.generators.seed import run_all_seeds
 from app.models.user import User
 from app.schemas.user import LoginRequest, RefreshRequest, TokenResponse, UserOut
+from app.services.audit import audit
 from app.services.auth import authenticate, issue_tokens, refresh_tokens
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -31,7 +32,27 @@ async def login(
             detail=f"Слишком много попыток входа. Повторите через {retry_after} сек.",
             headers={"Retry-After": str(retry_after)},
         )
-    user = await authenticate(session, body.email, body.password)
+    try:
+        user = await authenticate(session, body.email, body.password)
+    except HTTPException:
+        audit(
+            session,
+            action="auth.login_failed",
+            entity_type="user",
+            request=request,
+            details={"email": body.email},
+        )
+        await session.commit()
+        raise
+    audit(
+        session,
+        action="auth.login",
+        user_id=user.id,
+        entity_type="user",
+        entity_id=user.id,
+        request=request,
+    )
+    await session.commit()
     return issue_tokens(user)
 
 

@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,6 +26,7 @@ from app.models.order import WorkOrder, WorkOrderStatus, assert_transition
 from app.models.photo import Photo, PhotoKind
 from app.models.user import User, UserRole
 from app.schemas.order import ActCreate, ActOut, ActReview, ActSubmit
+from app.services.audit import audit
 
 router = APIRouter(prefix="/acts", tags=["acts"])
 
@@ -131,6 +132,7 @@ async def get_act_detail(
 @router.post("/", response_model=ActOut, status_code=201)
 async def create_draft_act(
     body: ActCreate,
+    request: Request,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_roles(UserRole.CONTRACTOR, UserRole.MASTER, UserRole.ADMIN)),
 ) -> Act:
@@ -163,6 +165,19 @@ async def create_draft_act(
             )
         )
 
+    audit(
+        session,
+        action="act.create",
+        user_id=user.id,
+        entity_type="act",
+        entity_id=act.id,
+        request=request,
+        details={
+            "work_order_id": str(wo.id),
+            "responses": len(body.responses),
+            "photo_keys": len(body.photo_keys),
+        },
+    )
     await session.commit()
     await session.refresh(act)
     return act
@@ -172,6 +187,7 @@ async def create_draft_act(
 async def submit_act(
     act_id: UUID,
     body: ActSubmit,
+    request: Request,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(require_roles(UserRole.CONTRACTOR, UserRole.MASTER, UserRole.ADMIN)),
 ) -> Act:
@@ -221,6 +237,20 @@ async def submit_act(
     act.status = ActStatus.SUBMITTED
     assert_transition(wo.status, WorkOrderStatus.SUBMITTED)
     wo.status = WorkOrderStatus.SUBMITTED
+
+    audit(
+        session,
+        action="act.submit",
+        user_id=user.id,
+        entity_type="act",
+        entity_id=act.id,
+        request=request,
+        details={
+            "work_order_id": str(wo.id),
+            "responses": len(body.responses),
+            "auto_check_pending": True,
+        },
+    )
     await session.commit()
 
     # 5) Запускаем авто-проверку
@@ -240,6 +270,21 @@ async def submit_act(
         assert_transition(wo.status, WorkOrderStatus.DELAYED_VERIFICATION)
         wo.status = WorkOrderStatus.DELAYED_VERIFICATION
 
+    audit(
+        session,
+        action="act.auto_check",
+        user_id=user.id,
+        entity_type="act",
+        entity_id=act.id,
+        request=request,
+        details={
+            "work_order_id": str(wo.id),
+            "passed": result.passed,
+            "score": result.score,
+            "final_status": act.status.value,
+            "work_order_status": wo.status.value,
+        },
+    )
     await session.commit()
     await session.refresh(act)
     return act
@@ -309,6 +354,7 @@ def _exif_gps_and_dt(raw: bytes) -> tuple[dict | None, datetime | None]:
 @router.post("/{act_id}/photos")
 async def upload_photo(
     act_id: UUID,
+    request: Request,
     file: UploadFile = File(...),
     kind: str = Form("other"),
     session: AsyncSession = Depends(get_session),
@@ -355,6 +401,22 @@ async def upload_photo(
         created_at=datetime.now(UTC),
     )
     session.add(photo)
+    await session.flush()
+    audit(
+        session,
+        action="act.photo_upload",
+        user_id=user.id,
+        entity_type="photo",
+        entity_id=photo.id,
+        request=request,
+        details={
+            "act_id": str(act_id),
+            "kind": photo_kind,
+            "size_bytes": len(raw),
+            "has_exif_gps": gps is not None,
+            "sha256": sha,
+        },
+    )
     await session.commit()
     await session.refresh(photo)
 
@@ -389,6 +451,7 @@ async def get_photo(
 async def review_act(
     act_id: UUID,
     body: ActReview,
+    request: Request,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(
         require_roles(UserRole.MASTER, UserRole.TECHNOLOGIST, UserRole.MANAGER, UserRole.ADMIN)
@@ -421,6 +484,23 @@ async def review_act(
     if body.decision == "reject":
         wo.rejection_reason = body.comment
 
+    audit(
+        session,
+        action=f"act.review.{body.decision}",
+        user_id=user.id,
+        entity_type="act",
+        entity_id=act.id,
+        request=request,
+        details={
+            "work_order_id": str(wo.id),
+            "from_act_status": ActStatus.AUTO_CONFIRMED.value
+            if act.status == target_act and body.decision == "confirm"
+            else ActStatus.DELAYED_VERIFICATION.value,
+            "to_act_status": target_act.value,
+            "to_work_order_status": target_wo.value,
+            "comment": body.comment,
+        },
+    )
     await session.commit()
     await session.refresh(act)
     return act
