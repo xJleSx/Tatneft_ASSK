@@ -1,0 +1,57 @@
+[project]
+name = "askk-cv-service"
+version = "0.1.0"
+description = "CV-сервис АСКК: детекция объектов и дефектов (YOLOv8)"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.32",
+  "pydantic>=2.9",
+  "pydantic-settings>=2.6",
+  "python-multipart>=0.0.20",
+  "Pillow>=11.0",
+  "httpx>=0.27",
+  "ultralytics>=8.3",   # YOLOv8
+  # torch ставим из индекса CPU-only (~200 MB вместо ~2 GB):
+  #   pip install torch --index-url https://download.pytorch.org/whl/cpu
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3",
+  "pytest-asyncio>=0.24",
+  "ruff>=0.7",
+  "black>=25.0",
+  "mypy>=1.13",
+  "httpx>=0.27",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
+ignore = [
+  "E501",  # line length — handled by black
+  "RUF001",  # cyrillic homoglyphs: false positives в русскоязычных строках
+  "RUF002",
+  "RUF003",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.mypy]
+python_version = "3.11"
+strict_optional = true
+warn_unused_ignores = true
+ignore_missing_imports = true   # ultralytics stubs нет
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

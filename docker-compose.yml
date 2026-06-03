@@ -16,6 +16,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      cv:
+        condition: service_started
     healthcheck:
       test: ["CMD", "python", "-c", "import socket; s=socket.socket(); s.settimeout(2); s.connect(('127.0.0.1', 8000)); s.close()"]
       interval: 30s
@@ -23,6 +25,23 @@ services:
       retries: 3
       start_period: 15s
     command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+
+  cv:
+    build: ./cv-service
+    container_name: askk-cv
+    env_file: ./cv-service/.env
+    ports:
+      - "8001:8000"
+    volumes:
+      # Кэш весов YOLO (один раз скачали — у всех рестартов)
+      - cv_models:/app/models
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s   # первый запуск: скачивание yolov8n.pt + warmup
+    # CV_ENABLED на стороне api: см. CV_SERVICE_URL=http://cv:8000
 
   postgres:
     image: timescale/timescaledb:latest-pg16
@@ -88,3 +107,4 @@ services:
 volumes:
   pgdata:
   minio_data:
+  cv_models:

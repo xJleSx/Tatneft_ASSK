@@ -60,6 +60,11 @@ class Settings(BaseSettings):
     asutp_mode: Literal["mock", "opcua", "rest"] = "mock"
     asutp_mock_interval_sec: int = 60
 
+    # CV-сервис (YOLOv8 и т.п.) — отдельный микросервис в docker-compose
+    cv_service_url: str = "http://cv:8000"
+    cv_timeout_s: float = 30.0
+    cv_enabled: bool = True
+
     geo_radius_m: int = 75
 
     @field_validator("cors_origins")

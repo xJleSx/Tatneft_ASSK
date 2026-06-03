@@ -25,11 +25,11 @@ askk-prototype/
 ├── backend/
 │   ├── app/
 │   │   ├── core/        # config, security, logging
-│   │   ├── db/          # Base, session
+│   │   ├── db/          # Base, session, types (JSONBCompat)
 │   │   ├── models/      # SQLAlchemy ORM
 │   │   ├── schemas/     # Pydantic
 │   │   ├── api/v1/      # FastAPI роутеры
-│   │   ├── services/    # бизнес-логика (auth, rules, geo, rating)
+│   │   ├── services/    # бизнес-логика (auth, rules, geo, rating, audit, cv_client)
 │   │   ├── integrations/asutp/  # мок + стаб OPC-UA
 │   │   ├── mocks/       # генераторы синтетики
 │   │   └── main.py
@@ -38,10 +38,26 @@ askk-prototype/
 │   ├── pyproject.toml
 │   ├── Dockerfile
 │   └── .env.example
+├── cv-service/          # CV-микросервис (YOLOv8) — MVP/спайк
+│   ├── app/
+│   │   ├── config.py
+│   │   ├── factory.py
+│   │   ├── main.py
+│   │   └── detectors/
+│   │       ├── base.py        # BaseDetector, Detection
+│   │       ├── coco.py        # YOLOv8n pretrained (placeholder)
+│   │       ├── defect.py      # заглушка под обученную модель
+│   │       └── mock.py        # для тестов (без torch)
+│   ├── tests/                 # 11 тестов на MockDetector
+│   ├── pyproject.toml
+│   ├── Dockerfile             # multi-stage, CPU-only torch
+│   └── .env.example
 ├── docs/
 │   ├── analogs.md       # откуда взяты предположения
 │   └── data-model.md    # ER-диаграмма
-├── docker-compose.yml
+├── docker-compose.yml   # + сервис `cv`
+├── Makefile             # + цели cv-dev / cv-test / cv-lint
+├── make.ps1
 └── README.md
 ```
 
@@ -150,6 +166,10 @@ python -m http.server 5500 --bind 127.0.0.1 --directory frontend
 | `make seed` | Заполнить БД демо-данными (через API `/auth/seed`) |
 | `make docker-up` | `docker compose up -d` |
 | `make docker-logs` | Логи API |
+| `make cv-dev` | CV-сервис локально (uvicorn, без docker) |
+| `make cv-test` | Тесты CV-сервиса на MockDetector (без torch) |
+| `make cv-lint` | ruff + mypy для CV-сервиса |
+| `make cv-install` | Создать `cv-service/.venv` + поставить deps (без torch) |
 | `make clean` | Удалить `__pycache__`, `build`, `dist`, `.egg-info` |
 
 Windows без GNU make:
@@ -157,6 +177,92 @@ Windows без GNU make:
 powershell -NoProfile -ExecutionPolicy Bypass -File make.ps1 test
 powershell -NoProfile -ExecutionPolicy Bypass -File make.ps1 ci
 ```
+
+## CV-сервис (YOLOv8, MVP/спайк)
+
+Отдельный FastAPI-микросервис для детекции объектов и (в перспективе) дефектов
+оборудования. Запускается как сервис `cv` в `docker-compose` (CPU-only torch).
+
+### Контракт
+
+| Метод | URL | Назначение |
+|-------|-----|------------|
+| `GET`  | `/health`   | Liveness (всегда 200, если процесс жив) |
+| `GET`  | `/readyz`   | Readiness (200 только после `warmup`) |
+| `GET`  | `/detectors` | Имя активного детектора и список поддерживаемых |
+| `POST` | `/infer`    | `multipart file=...` → `{detector, count, latency_ms, image_size, detections[]}` |
+
+`Detection`:
+```json
+{
+  "label": "person",
+  "confidence": 0.91,
+  "bbox": {"x_min": 0, "y_min": 0, "x_max": 100, "y_max": 100},
+  "detector": "yolov8-coco",
+  "meta": {"coco_class_id": 0}
+}
+```
+
+### Детекторы
+
+| `DETECTOR=` | Что делает | Когда использовать |
+|-------------|-----------|-------------------|
+| `coco` (default) | YOLOv8n pretrained на COCO (80 классов: person, car, fire_hydrant…) | MVP / placeholder. Умеет находить людей, технику общего вида. |
+| `defect` | Заглушка: возвращает `[]` + лог «model not trained» | Пока нет обученной модели дефектов (коррозия, утечки). |
+| `mock` | Фиксированные боксы, **без torch** | Только локальные тесты. |
+
+### Запуск
+
+```bash
+# 1) Поднять весь стек
+make docker-up
+
+# 2) Логи CV-сервиса (первый старт: скачивание yolov8n.pt + warmup)
+make docker-logs-cv
+
+# 3) Проверка
+curl http://localhost:8001/health
+curl http://localhost:8001/readyz
+
+# 4) Инференс
+curl -X POST http://localhost:8001/infer \
+     -F "file=@/path/to/photo.jpg"
+```
+
+### Локальная разработка (без docker)
+
+```bash
+make cv-install    # создать cv-service/.venv + поставить deps (без torch)
+make cv-dev        # uvicorn --reload на порту 8000
+make cv-test       # 11 тестов на MockDetector (0.2с, без torch)
+make cv-lint       # ruff + mypy
+```
+
+### Backend-интеграция
+
+`backend/app/services/cv_client.py` — httpx-клиент. Вызывается из
+`auto_check_act` (см. `app/services/rules.py:_run_cv_check`):
+- Если `CV_ENABLED=true` и у акта есть фото — каждое прогоняется через `/infer`.
+- Результаты (счётчик детекций, лейблы) попадают в `auto_check_details["cv"]`.
+- Если CV-сервис недоступен (`CVUnavailableError`) — автопроверка
+  продолжается без CV-шага (graceful degradation, не валит акт).
+- Конкретные правила («нет дефектов на after-фото», «обнаружена каска»)
+  добавим, когда появится обученная модель.
+
+Переменные backend:
+- `CV_SERVICE_URL` (default `http://cv:8000`)
+- `CV_TIMEOUT_S` (default `30.0`)
+- `CV_ENABLED` (default `true`)
+
+### Что нужно для следующего шага (обучение)
+
+1. **Сбор датасета** — фото дефектов с объектов Татнефти (по ТЗ, минимум
+   ~500 изображений на класс). Сейчас: ничего.
+2. **Разметка** — Roboflow / CVAT / LabelImg. YOLO-формат.
+3. **Обучение** — `yolo detect train data=dataset.yaml model=yolov8s.pt epochs=100 imgsz=640`.
+4. **Экспорт** — `yolo export model=runs/detect/train/weights/best.pt format=onnx`.
+5. **Деплой** — `MODEL_PATH=/models/defect_v1.pt CV_DEVICE=cuda:0` в `.env`.
+6. **Новый класс** в `app/detectors/` (например, `DefectDetector(yolo_path)`).
 
 ## Ключевые эндпоинты
 
@@ -178,6 +284,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File make.ps1 ci
 | `GET`  | `/api/v1/telemetry/equipment/{id}/history?hours=24` | История |
 | `GET`  | `/api/v1/dashboard/summary` | Сводка для главной |
 | `GET`  | `/api/v1/dashboard/contractors/ranking` | Рейтинг подрядчиков |
+| `GET`  | `:8001/health` | Liveness CV-сервиса (YOLOv8) |
+| `GET`  | `:8001/readyz` | Readiness CV-сервиса |
+| `POST` | `:8001/infer` | Детекция объектов на фото |
 
 ## Поток данных (end-to-end сценарий)
 

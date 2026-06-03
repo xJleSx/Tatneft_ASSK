@@ -4,6 +4,7 @@ __pycache__/
 *.egg-info/
 .venv/
 venv/
+cv-service/.venv/
 
 # IDE
 .vscode/
@@ -29,3 +30,9 @@ build/
 
 # Local photo storage (dev only)
 backend/app/photos_storage/
+
+# CV models / weights
+cv-service/models/
+cv-service/weights/
+*.pt
+*.onnx

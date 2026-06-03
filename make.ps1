@@ -53,6 +53,10 @@ function Show-Help {
         "  docker-up   docker compose up -d"
         "  docker-down docker compose down"
         "  docker-logs docker compose logs -f api"
+        "  cv-dev      uvicorn cv-service/app.main:app --reload (port 8000)"
+        "  cv-test     pytest cv-service/tests/ (MockDetector, no torch)"
+        "  cv-lint     ruff + mypy for cv-service"
+        "  cv-install  create cv-service/.venv + install deps (no torch)"
         "  clean       remove __pycache__, build, dist, .egg-info"
     ) | ForEach-Object { Write-Host $_ }
 }
@@ -89,6 +93,20 @@ try {
         "docker-up"   { Pop-Location; docker compose up -d; return }
         "docker-down" { Pop-Location; docker compose down; return }
         "docker-logs" { Pop-Location; docker compose logs -f api; return }
+        "docker-logs-cv" { Pop-Location; docker compose logs -f cv; return }
+        "cv-dev"      { Pop-Location; uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --app-dir cv-service; return }
+        "cv-test"     { Pop-Location; python -m pytest cv-service/tests/ -v; return }
+        "cv-test-fast"{ Pop-Location; python -m pytest cv-service/tests/ -q; return }
+        "cv-lint"     { Pop-Location; ruff check cv-service/app cv-service/tests; python -m mypy cv-service/app; return }
+        "cv-install"  {
+            Pop-Location
+            python -m venv cv-service/.venv
+            & cv-service/.venv/Scripts/python.exe -m pip install -U pip
+            & cv-service/.venv/Scripts/python.exe -m pip install `
+                fastapi 'uvicorn[standard]' pydantic pydantic-settings `
+                python-multipart Pillow httpx pytest pytest-asyncio ruff black mypy
+            return
+        }
         "clean" {
             Pop-Location
             Get-ChildItem -Recurse -Directory -Filter __pycache__ -ErrorAction SilentlyContinue |

@@ -12,7 +12,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from sqlalchemy import select
@@ -27,6 +27,10 @@ from app.models.work import ChecklistStep, StepDataType
 from app.services.geo import check_geo
 
 log = get_logger(__name__)
+
+# Локальный импорт типов, чтобы не тянуть в каждом тесте
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 @dataclass
@@ -152,6 +156,17 @@ async def auto_check_act(
     weights.append((0.15, has_before, "photo_before"))
     weights.append((0.15, has_after, "photo_after"))
 
+    # 3.5) CV-детекция (опционально): если CV включён и есть фото — прогоним.
+    # При недоступности CV-сервиса не валим автопроверку, а пишем warning.
+    if settings.cv_enabled and photos:
+        cv_summary = await _run_cv_check(photos)
+        if cv_summary is not None:
+            details["cv"] = cv_summary
+            # В MVP вес маленький: это «сигнал», а не решающий фактор.
+            # Конкретные правила (например, «нет дефектов на after-фото»)
+            # добавим, когда появится обученная модель.
+            weights.append((0.05, True, "cv_run"))
+
     # 4) Телеметрия: если есть «после» и известны нормативы — проверим
     if act.telemetry_after_json and act.telemetry_before_json:
         # Простая эвристика: ключевые параметры equipment изменились
@@ -179,3 +194,73 @@ async def auto_check_act(
     return AutoCheckResult(
         passed=passed, score=round(score, 4), details=details, failed_rules=failed
     )
+
+
+async def _run_cv_check(photos: Sequence[Photo]) -> dict | None:
+    """Прогнать фото через CV-сервис. Возвращает None, если CV недоступен.
+
+    Формат summary:
+      {
+        "ran": bool,
+        "detector": str,
+        "photos_checked": int,
+        "photos_failed": int,
+        "total_detections": int,
+        "labels": {"person": 2, "fire_hydrant": 1, ...}
+      }
+    """
+    from app.services.cv_client import CVBadImageError, CVUnavailableError, get_cv_client
+
+    labels: dict[str, int] = {}
+    total = 0
+    failed = 0
+    detector_name: str | None = None
+
+    try:
+        async with get_cv_client() as cv:
+            for photo in photos:
+                try:
+                    raw = _read_photo_bytes(photo)
+                except (OSError, ValueError) as e:
+                    log.warning("CV: не удалось прочитать фото %s: %s", photo.id, e)
+                    failed += 1
+                    continue
+                if raw is None:
+                    failed += 1
+                    continue
+                try:
+                    result = await cv.infer(raw, filename=f"{photo.id}.jpg")
+                except (CVUnavailableError, CVBadImageError) as e:
+                    log.warning("CV: инференс пропущен (%s): %s", type(e).__name__, e)
+                    return None
+                if detector_name is None:
+                    detector_name = result.get("detector")
+                for d in result.get("detections", []):
+                    label = d.get("label", "unknown")
+                    labels[label] = labels.get(label, 0) + 1
+                    total += 1
+    except CVUnavailableError as e:
+        log.warning("CV-сервис недоступен: %s", e)
+        return None
+
+    return {
+        "ran": True,
+        "detector": detector_name,
+        "photos_checked": len(photos) - failed,
+        "photos_failed": failed,
+        "total_detections": total,
+        "labels": labels,
+    }
+
+
+def _read_photo_bytes(photo: Photo) -> bytes | None:
+    """Прочитать байты фото (в MVP — с локального диска, потом MinIO)."""
+    from pathlib import Path
+
+    key = getattr(photo, "object_key", None)
+    if not key:
+        return None
+    path = Path(key)
+    if not path.is_file():
+        return None
+    return path.read_bytes()
