@@ -37,6 +37,45 @@ class ActStatus(str, enum.Enum):
     ISSUE_FOUND = "issue_found"
 
 
+# Разрешённые переходы ActStatus. В отличие от WorkOrder, у акта нет
+# CANCELLED — акт отменяется через REJECTED.
+ACT_TRANSITIONS: dict[ActStatus, frozenset[ActStatus]] = {
+    ActStatus.DRAFT: frozenset(
+        {ActStatus.SUBMITTED, ActStatus.REJECTED}
+    ),
+    ActStatus.SUBMITTED: frozenset(
+        {
+            ActStatus.AUTO_CONFIRMED,
+            ActStatus.DELAYED_VERIFICATION,
+            ActStatus.REJECTED,
+        }
+    ),
+    ActStatus.AUTO_CONFIRMED: frozenset(
+        {ActStatus.CONFIRMED, ActStatus.ISSUE_FOUND, ActStatus.REJECTED}
+    ),
+    ActStatus.DELAYED_VERIFICATION: frozenset(
+        {ActStatus.VERIFIED, ActStatus.ISSUE_FOUND, ActStatus.REJECTED}
+    ),
+    ActStatus.CONFIRMED: frozenset(),
+    ActStatus.VERIFIED: frozenset(),
+    ActStatus.ISSUE_FOUND: frozenset({ActStatus.DRAFT, ActStatus.REJECTED}),
+    ActStatus.REJECTED: frozenset({ActStatus.DRAFT}),
+}
+
+
+def can_act_transition(from_status: ActStatus, to_status: ActStatus) -> bool:
+    if from_status == to_status:
+        return True
+    return to_status in ACT_TRANSITIONS.get(from_status, frozenset())
+
+
+def assert_act_transition(from_status: ActStatus, to_status: ActStatus) -> None:
+    if not can_act_transition(from_status, to_status):
+        raise ValueError(
+            f"Недопустимый переход Act: {from_status.value} -> {to_status.value}"
+        )
+
+
 class Act(UUIDPKMixin, TimestampMixin, Base):
     __tablename__ = "acts"
 

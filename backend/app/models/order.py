@@ -40,6 +40,67 @@ class WorkOrderPriority(str, enum.Enum):
     CRITICAL = "critical"
 
 
+# Разрешённые переходы WorkOrderStatus. Используется для валидации в API/сервисах,
+# чтобы нельзя было «прыгнуть» через состояния.
+WORK_ORDER_TRANSITIONS: dict[WorkOrderStatus, frozenset[WorkOrderStatus]] = {
+    WorkOrderStatus.DRAFT: frozenset(
+        {WorkOrderStatus.ASSIGNED, WorkOrderStatus.CANCELLED}
+    ),
+    WorkOrderStatus.ASSIGNED: frozenset(
+        {WorkOrderStatus.IN_PROGRESS, WorkOrderStatus.CANCELLED}
+    ),
+    WorkOrderStatus.IN_PROGRESS: frozenset(
+        {
+            WorkOrderStatus.SUBMITTED,
+            WorkOrderStatus.AUTO_CONFIRMED,
+            WorkOrderStatus.DELAYED_VERIFICATION,
+            WorkOrderStatus.CANCELLED,
+        }
+    ),
+    WorkOrderStatus.SUBMITTED: frozenset(
+        {
+            WorkOrderStatus.AUTO_CONFIRMED,
+            WorkOrderStatus.DELAYED_VERIFICATION,
+            WorkOrderStatus.CANCELLED,
+        }
+    ),
+    WorkOrderStatus.AUTO_CONFIRMED: frozenset(
+        {
+            WorkOrderStatus.CONFIRMED,
+            WorkOrderStatus.ISSUE_FOUND,
+            WorkOrderStatus.CANCELLED,
+        }
+    ),
+    WorkOrderStatus.DELAYED_VERIFICATION: frozenset(
+        {WorkOrderStatus.VERIFIED, WorkOrderStatus.ISSUE_FOUND}
+    ),
+    WorkOrderStatus.CONFIRMED: frozenset(),
+    WorkOrderStatus.VERIFIED: frozenset(),
+    WorkOrderStatus.ISSUE_FOUND: frozenset(
+        {WorkOrderStatus.ASSIGNED, WorkOrderStatus.CANCELLED}
+    ),
+    WorkOrderStatus.REJECTED: frozenset(
+        {WorkOrderStatus.DRAFT, WorkOrderStatus.CANCELLED}
+    ),
+    WorkOrderStatus.CANCELLED: frozenset(),
+}
+
+
+def can_transition(from_status: WorkOrderStatus, to_status: WorkOrderStatus) -> bool:
+    """Можно ли перевести наряд из from_status в to_status."""
+    if from_status == to_status:
+        return True  # no-op
+    return to_status in WORK_ORDER_TRANSITIONS.get(from_status, frozenset())
+
+
+def assert_transition(from_status: WorkOrderStatus, to_status: WorkOrderStatus) -> None:
+    """Бросает ValueError при недопустимом переходе WorkOrder."""
+    if not can_transition(from_status, to_status):
+        raise ValueError(
+            f"Недопустимый переход WorkOrder: {from_status.value} -> {to_status.value}"
+        )
+
+
 class WorkOrder(UUIDPKMixin, TimestampMixin, Base):
     __tablename__ = "work_orders"
 

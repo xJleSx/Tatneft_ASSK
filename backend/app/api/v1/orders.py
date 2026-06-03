@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, require_roles
 from app.db.session import get_session
-from app.models.order import WorkOrder, WorkOrderStatus
+from app.models.order import WorkOrder, WorkOrderStatus, assert_transition
 from app.models.user import User, UserRole
 from app.schemas.order import WorkOrderCreate, WorkOrderOut, WorkOrderUpdate
 
@@ -102,7 +102,14 @@ async def update_order(
     wo = await session.get(WorkOrder, order_id)
     if not wo:
         raise HTTPException(404, "Наряд не найден")
-    for k, v in body.model_dump(exclude_unset=True).items():
+    data = body.model_dump(exclude_unset=True)
+    new_status = data.get("status")
+    if new_status is not None and new_status != wo.status:
+        try:
+            assert_transition(wo.status, new_status)
+        except ValueError as e:
+            raise HTTPException(400, str(e)) from e
+    for k, v in data.items():
         setattr(wo, k, v)
     await session.commit()
     await session.refresh(wo)
@@ -125,8 +132,10 @@ async def start_order(
         and wo.contractor_id != user.contractor_id
     ):
         raise HTTPException(403, "Чужой наряд")
-    if wo.status not in (WorkOrderStatus.ASSIGNED,):
-        raise HTTPException(400, f"Наряд в статусе {wo.status.value}, нельзя взять в работу")
+    try:
+        assert_transition(wo.status, WorkOrderStatus.IN_PROGRESS)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
     wo.status = WorkOrderStatus.IN_PROGRESS
     wo.actual_start_at = datetime.now(UTC)
     await session.commit()

@@ -20,9 +20,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user, require_roles
 from app.db.session import get_session
 from app.integrations.asutp.factory import get_asutp_adapter
-from app.models.act import Act, ActStatus, ChecklistResponse
+from app.models.act import Act, ActStatus, ChecklistResponse, assert_act_transition
 from app.models.equipment import Equipment
-from app.models.order import WorkOrder, WorkOrderStatus
+from app.models.order import WorkOrder, WorkOrderStatus, assert_transition
 from app.models.photo import Photo, PhotoKind
 from app.models.user import User, UserRole
 from app.schemas.order import ActCreate, ActOut, ActReview, ActSubmit
@@ -178,8 +178,10 @@ async def submit_act(
     act = await session.get(Act, act_id)
     if not act:
         raise HTTPException(404, "Акт не найден")
-    if act.status not in (ActStatus.DRAFT, ActStatus.REJECTED):
-        raise HTTPException(400, f"Акт в статусе {act.status.value}, нельзя подписать")
+    try:
+        assert_act_transition(act.status, ActStatus.SUBMITTED)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
 
     # 1) Сохраняем ответы чек-листа
     await session.execute(delete(ChecklistResponse).where(ChecklistResponse.act_id == act.id))
@@ -217,6 +219,7 @@ async def submit_act(
 
     # 4) Меняем статус на submitted
     act.status = ActStatus.SUBMITTED
+    assert_transition(wo.status, WorkOrderStatus.SUBMITTED)
     wo.status = WorkOrderStatus.SUBMITTED
     await session.commit()
 
@@ -230,9 +233,11 @@ async def submit_act(
 
     if result.passed:
         act.status = ActStatus.AUTO_CONFIRMED
+        assert_transition(wo.status, WorkOrderStatus.AUTO_CONFIRMED)
         wo.status = WorkOrderStatus.AUTO_CONFIRMED
     else:
         act.status = ActStatus.DELAYED_VERIFICATION
+        assert_transition(wo.status, WorkOrderStatus.DELAYED_VERIFICATION)
         wo.status = WorkOrderStatus.DELAYED_VERIFICATION
 
     await session.commit()
@@ -401,11 +406,19 @@ async def review_act(
     act.reviewer_comment = body.comment
 
     if body.decision == "confirm":
-        act.status = ActStatus.CONFIRMED
-        wo.status = WorkOrderStatus.CONFIRMED
+        target_act = ActStatus.CONFIRMED
+        target_wo = WorkOrderStatus.CONFIRMED
     else:
-        act.status = ActStatus.REJECTED
-        wo.status = WorkOrderStatus.REJECTED
+        target_act = ActStatus.REJECTED
+        target_wo = WorkOrderStatus.REJECTED
+    try:
+        assert_act_transition(act.status, target_act)
+        assert_transition(wo.status, target_wo)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    act.status = target_act
+    wo.status = target_wo
+    if body.decision == "reject":
         wo.rejection_reason = body.comment
 
     await session.commit()
