@@ -9,7 +9,10 @@
 
 .PHONY: help install dev test test-fast test-cov lint fmt typecheck ci \
         migrate revision seed seed-clean docker-up docker-down docker-logs \
-        db-shell clean clean-pycache clean-build
+        db-shell clean clean-pycache clean-build \
+        cv-dev cv-test cv-test-fast cv-lint cv-install cv-install-full \
+        cv-smoke cv-synth-data cv-train cv-eval cv-defect-smoke \
+        synth-demo synth-demo-http
 
 # ---------- Meta ----------
 
@@ -113,6 +116,21 @@ cv-install-full:	## + ultralytics + torch CPU (полный ML-стек)
 
 cv-smoke:	## Smoke-тест YOLOv8 на реальном фото (требует ultralytics+torch)
 	cd cv-service && .venv/Scripts/python.exe -m pytest tests/test_coco_smoke.py -v
+
+cv-synth-data:	## Сгенерить синтетический датасет дефектов (corrosion/leak/damage)
+	cd cv-service && .venv/Scripts/python.exe scripts/synth_train_data.py --count 400 --val 100 --out dataset
+
+cv-train:	## Дообучить YOLOv8n на синтетике (~8 мин/5 эпох, 30 эпох ≈ 50 мин на CPU)
+	cd cv-service && .venv/Scripts/python.exe scripts/yolo_train.py
+
+cv-train-quick:	## Быстрое обучение (5 эпох, для smoke-проверки пайплайна)
+	cd cv-service && .venv/Scripts/python.exe scripts/yolo_train.py --epochs 5
+
+cv-eval:	## Валидация обученной модели на val (выводит mAP50/mAP50-95)
+	cd cv-service && .venv/Scripts/python.exe -c "from ultralytics import YOLO; m = YOLO('models/defect_yolov8n_v1/weights/best.pt'); m.val(data='dataset/data.yaml')"
+
+cv-defect-smoke:	## Smoke-тест DefectDetector на синтетике (нужны веса + torch)
+	cd cv-service && .venv/Scripts/python.exe -m pytest tests/test_defect_smoke.py -v
 
 synth-demo:	## Демо: сгенерить синтетику + прогнать через YOLOv8 (in-process)
 	cd cv-service && .venv/Scripts/python.exe -m app.synth_demo

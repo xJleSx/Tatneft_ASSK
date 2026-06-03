@@ -58,6 +58,11 @@ function Show-Help {
         "  cv-lint     ruff + mypy for cv-service"
         "  cv-install  create cv-service/.venv + install deps (no torch)"
         "  cv-smoke    smoke-test YOLOv8 on real photo (needs ultralytics+torch)"
+        "  cv-synth-data  generate synthetic defect dataset (corrosion/leak/damage)"
+        "  cv-train       train YOLOv8n on synthetic (~8 min for 5 epochs on CPU)"
+        "  cv-train-quick 5-epoch train (smoke-check pipeline)"
+        "  cv-eval        validate trained model (mAP50/mAP50-95)"
+        "  cv-defect-smoke  smoke-test DefectDetector on val images (needs weights+torch)"
         "  synth-demo  generate synthetic + run YOLOv8 (in-process)"
         "  clean       remove __pycache__, build, dist, .egg-info"
     ) | ForEach-Object { Write-Host $_ }
@@ -116,6 +121,11 @@ try {
             return
         }
         "cv-smoke"    { Pop-Location; python -m pytest cv-service/tests/test_coco_smoke.py -v; return }
+        "cv-synth-data" { Pop-Location; & cv-service/.venv/Scripts/python.exe cv-service/scripts/synth_train_data.py --count 400 --val 100 --out cv-service/dataset; return }
+        "cv-train"    { Pop-Location; & cv-service/.venv/Scripts/python.exe cv-service/scripts/yolo_train.py; return }
+        "cv-train-quick" { Pop-Location; & cv-service/.venv/Scripts/python.exe cv-service/scripts/yolo_train.py --epochs 5; return }
+        "cv-eval"     { Pop-Location; & cv-service/.venv/Scripts/python.exe -c "from ultralytics import YOLO; m = YOLO('cv-service/models/defect_yolov8n_v1/weights/best.pt'); m.val(data='cv-service/dataset/data.yaml')"; return }
+        "cv-defect-smoke" { Pop-Location; python -m pytest cv-service/tests/test_defect_smoke.py -v; return }
         "synth-demo"  { Pop-Location; python -m app.synth_demo; return }
         "clean" {
             Pop-Location

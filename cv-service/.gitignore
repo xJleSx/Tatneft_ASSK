@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.eggs/
+
+# venv
+.venv/
+venv/
+
+# Data: 500 JPGs (~30MB) + labels — не в гите, генерим scripts/synth_train_data.py
+dataset/
+
+# Weights: 6 MB best.pt — не в гите, тренеруем scripts/yolo_train.py
+# (для прод-деплоя монтируется том `cv_models` из compose)
+models/
+
+# Logs
+*.log
+
+# IDE
+.idea/
+.vscode/

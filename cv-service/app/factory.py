@@ -1,9 +1,12 @@
 """Фабрика детекторов по настройкам.
 
-Используется при старте CV-сервиса и пересоздаёт детектор при изменении
+Используется при старте CV-сервиса. Пересоздаёт детектор при изменении
 `detector` в env (hot-reload не реализован — перезапуск сервиса).
-"""
 
+При DETECTOR=defect обязателен существующий файл весов. Если его нет —
+падаем с FileNotFoundError, чтобы оператор увидел проблему в логах при
+старте, а не при первом /infer.
+"""
 from __future__ import annotations
 
 import logging
@@ -28,8 +31,18 @@ def build_detector(settings: Settings) -> BaseDetector:
             iou=settings.iou,
         )
     if kind == "defect":
-        log.info("Building DefectDetector (stub mode)")
-        return DefectDetector()
+        log.info(
+            "Building DefectDetector (path=%s, device=%s, conf=%.2f)",
+            settings.defect_model_path,
+            settings.device,
+            settings.defect_confidence,
+        )
+        return DefectDetector(
+            model_path=settings.defect_model_path,
+            device=settings.device,
+            conf=settings.defect_confidence,
+            iou=settings.defect_iou,
+        )
     if kind == "mock":
         log.info("Building MockDetector (no weights)")
         return MockDetector()

@@ -121,14 +121,41 @@ def test_build_detector_coco(monkeypatch):
     assert det.name == "yolov8-coco"
 
 
-def test_build_detector_defect_stub(monkeypatch):
+def test_build_detector_defect_with_weights(monkeypatch):
+    """Если файл весов дефекта существует — factory возвращает DefectDetector (не stub)."""
+    import pytest
+
+    from app.config import DEFAULT_DEFECT_WEIGHTS, get_settings
+    from app.factory import build_detector
+
+    if not DEFAULT_DEFECT_WEIGHTS.is_file():
+        pytest.skip(
+            f"Нет обученных весов: {DEFAULT_DEFECT_WEIGHTS}. "
+            f"Запустите `make cv-train` (5 эпох, ~8 мин на CPU)."
+        )
+
     monkeypatch.setenv("DETECTOR", "defect")
+    get_settings.cache_clear()
+    det = build_detector(get_settings())
+    assert det.name == "defect-yolov8"
+
+
+def test_build_detector_defect_missing_weights_raises(monkeypatch, tmp_path):
+    """Если файл весов дефекта НЕ существует — factory падает с FileNotFoundError.
+
+    Лучше упасть на старте сервиса, чем при первом POST /infer.
+    """
+    import pytest
+
     from app.config import get_settings
     from app.factory import build_detector
 
+    monkeypatch.setenv("DETECTOR", "defect")
+    monkeypatch.setenv("DEFECT_MODEL_PATH", str(tmp_path / "nope.pt"))
     get_settings.cache_clear()
-    det = build_detector(get_settings())
-    assert det.name == "defect-stub"
+    with pytest.raises(FileNotFoundError) as exc_info:
+        build_detector(get_settings())
+    assert "nope.pt" in str(exc_info.value)
 
 
 def test_build_detector_unknown_raises(monkeypatch):
