@@ -170,6 +170,13 @@ python -m http.server 5500 --bind 127.0.0.1 --directory frontend
 | `make cv-test` | Тесты CV-сервиса на MockDetector (без torch) |
 | `make cv-lint` | ruff + mypy для CV-сервиса |
 | `make cv-install` | Создать `cv-service/.venv` + поставить deps (без torch) |
+| `make cv-install-full` | + ultralytics + torch CPU |
+| `make cv-synth-data` | Сгенерить синтетический датасет (400 train + 100 val) |
+| `make cv-train` | Дообучить YOLOv8n на синтетике (~50 мин/30 эпох на CPU) |
+| `make cv-train-quick` | 5 эпох для smoke-проверки (~8 мин) |
+| `make cv-eval` | Валидация обученной модели (mAP50/95) |
+| `make cv-defect-smoke` | Smoke-тесты DefectDetector на val-выборке |
+| `make synth-demo` | Демо: синтетика → YOLOv8 (in-process) |
 | `make clean` | Удалить `__pycache__`, `build`, `dist`, `.egg-info` |
 
 Windows без GNU make:
@@ -285,15 +292,68 @@ python scripts/fetch_sample_image.py   # один раз: ~40KB Pexels JPEG
 - `CV_TIMEOUT_S` (default `30.0`)
 - `CV_ENABLED` (default `true`)
 
-### Что нужно для следующего шага (обучение)
+### Что нужно для следующего шага (обучение на реальных данных)
+
+Текущее состояние: обучена baseline-модель на **синтетике** (3 класса,
+~500 картинок). mAP50 ≈ 0.91 за 5 эпох. Этого хватает, чтобы прогнать
+end-to-end сценарий; для прода нужны реальные данные.
 
 1. **Сбор датасета** — фото дефектов с объектов Татнефти (по ТЗ, минимум
-   ~500 изображений на класс). Сейчас: ничего.
+   ~500 изображений на класс).
 2. **Разметка** — Roboflow / CVAT / LabelImg. YOLO-формат.
 3. **Обучение** — `yolo detect train data=dataset.yaml model=yolov8s.pt epochs=100 imgsz=640`.
 4. **Экспорт** — `yolo export model=runs/detect/train/weights/best.pt format=onnx`.
-5. **Деплой** — `MODEL_PATH=/models/defect_v1.pt CV_DEVICE=cuda:0` в `.env`.
-6. **Новый класс** в `app/detectors/` (например, `DefectDetector(yolo_path)`).
+5. **Деплой** — `DEFECT_MODEL_PATH=/models/defect_v1.pt CV_DEVICE=cuda:0` в `.env`.
+
+### Обучение на синтетике (текущий MVP)
+
+Синтетика — это стартовая точка: показываем, что пайплайн «генерация
+датасета → обучение → инференс через HTTP» работает end-to-end, без
+необходимости собирать и размечать реальные фото.
+
+```bash
+# 1) Сгенерить датасет (numpy-генератор, ~15 сек на 500 картинок)
+make cv-synth-data
+
+# 2) Обучить YOLOv8n (CPU, 30 эпох ≈ 50 мин; 5 эпох ≈ 8 мин для smoke)
+make cv-train-quick           # 5 эпох
+make cv-train                 # 30 эпох (дефолт)
+
+# 3) Оценить на val (mAP50/mAP50-95 по классам)
+make cv-eval
+
+# 4) Запустить CV-сервис с обученной моделью
+DETECTOR=defect make cv-dev
+curl -sS -X POST -F "file=@cv-service/dataset/images/val/val_0000.jpg" \
+    http://127.0.0.1:8000/infer | jq .
+
+# 5) Smoke-тесты
+make cv-defect-smoke
+```
+
+Классы (см. `cv-service/scripts/synth_train_data.py`):
+
+| ID | Имя | Severity | Описание |
+|----|-----|----------|----------|
+| 0 | corrosion | 1 | Рыжие пятна окисления (неровные ellipse с шумом) |
+| 1 | leak      | 2 | Капли/потёки (округлые пятна с градиентом) |
+| 2 | damage    | 3 | Механические повреждения (с-curve / сетка трещин) |
+
+`severity` прокидывается в `Detection.meta.severity` и пригодится для
+приоритизации ремонта в бекенде (`_run_cv_check` / auto_check).
+
+**Метрики** (5 эпох, CPU, yolov8n):
+
+| Class    | Images | Instances | P     | R     | mAP50 | mAP50-95 |
+|----------|--------|-----------|-------|-------|-------|----------|
+| all      | 100    | 252       | 0.816 | 0.943 | 0.909 | 0.778    |
+| corrosion | 56    | 81        | 0.955 | 0.988 | 0.985 | 0.910    |
+| leak     | 63     | 89        | 0.581 | 0.955 | 0.800 | 0.684    |
+| damage   | 62     | 82        | 0.912 | 0.887 | 0.944 | 0.742    |
+
+Что в гите: `scripts/`, `app/detectors/yolo.py`, `app/detectors/defect.py`,
+`tests/test_defect_smoke.py`. Что в `.gitignore`: `cv-service/dataset/`
+и `cv-service/models/` (регенерируются / тренируются локально).
 
 ## Ключевые эндпоинты
 
