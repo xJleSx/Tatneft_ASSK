@@ -126,6 +126,38 @@ python -m http.server 5500 --bind 127.0.0.1 --directory frontend
 Дашборд показывает: KPI сводку, последние наряды, рейтинг подрядчиков,
 распределение актов по статусам.
 
+## Команды разработки (Makefile)
+
+Все рутинные команды собраны в `Makefile` (GNU make) и продублированы в
+`make.ps1` для Windows PowerShell (если GNU make не установлен —
+делает прямые вызовы `pytest` / `ruff` / `mypy` / `alembic`).
+
+| Команда | Что делает |
+|---------|-----------|
+| `make help` | Список всех целей с описанием |
+| `make install` | Создать venv, поставить `.[dev]` |
+| `make dev` | Запустить API (`uvicorn --reload`) |
+| `make test` | Полный прогон тестов (`pytest -v`) |
+| `make test-fast` | Быстрый прогон (`pytest -q`) |
+| `make test-cov` | Тесты + coverage |
+| `make lint` | `ruff check` (только safe) |
+| `make lint-fix` | `ruff check --fix` |
+| `make fmt` | `black` + `ruff --fix` |
+| `make typecheck` | `mypy app` |
+| `make ci` | `lint` + `typecheck` + `test-fast` (как в GitHub Actions) |
+| `make migrate` | `alembic upgrade head` |
+| `make revision msg="..."` | Сгенерировать новую миграцию |
+| `make seed` | Заполнить БД демо-данными (через API `/auth/seed`) |
+| `make docker-up` | `docker compose up -d` |
+| `make docker-logs` | Логи API |
+| `make clean` | Удалить `__pycache__`, `build`, `dist`, `.egg-info` |
+
+Windows без GNU make:
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File make.ps1 test
+powershell -NoProfile -ExecutionPolicy Bypass -File make.ps1 ci
+```
+
 ## Ключевые эндпоинты
 
 | Метод | URL | Описание |
