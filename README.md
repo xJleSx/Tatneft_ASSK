@@ -232,10 +232,41 @@ curl -X POST http://localhost:8001/infer \
 ### Локальная разработка (без docker)
 
 ```bash
-make cv-install    # создать cv-service/.venv + поставить deps (без torch)
-make cv-dev        # uvicorn --reload на порту 8000
-make cv-test       # 11 тестов на MockDetector (0.2с, без torch)
-make cv-lint       # ruff + mypy
+make cv-install         # ~30с: venv + deps БЕЗ torch
+make cv-install-full    # + ultralytics + torch CPU (~250 MB, ~2-3 мин)
+make cv-dev             # uvicorn --reload на порту 8000
+make cv-test            # 11 тестов на MockDetector (0.2с, без torch)
+make cv-smoke           # 3 smoke-теста с реальным YOLO (нужен cv-install-full)
+make cv-lint            # ruff + mypy
+```
+
+### Демо на синтетике (что уже работает сейчас)
+
+`make synth-demo` (после `cv-install-full`) генерирует 6 сцен и прогоняет
+через YOLOv8:
+
+| Сцена | Что на ней | YOLOv8 (COCO) находит |
+|-------|-----------|----------------------|
+| `person` | Стик-человечек на градиенте неба | `[]` — слишком стилизованно |
+| `car` | Красный прямоугольник + колёса | `[]` — не похоже на фото |
+| `fire_hydrant` | Красный цилиндр + шапка | `[]` — YOLO не учил «гидранты из геометрии» |
+| `multi` | 2 человечка + машина | `[]` |
+| `noise` | RGB-шум | `[]` (и не должен) |
+| `real_photo` | **Реальное фото с Pexels (CC0)** | **`[person]`** с conf ~0.7-0.9, latency ~70мс ✓ |
+
+YOLOv8 обучен на фото из COCO, поэтому стилизованные рисунки не
+детектируются — это ожидаемо. **`real_photo` подтверждает, что pipeline
+end-to-end работает**: веса скачиваются, warmup, инференс, формат
+ответа, latency — всё ок.
+
+Чтобы получить **детекцию дефектов оборудования**, нужна обученная
+модель на реальных данных (см. ниже).
+
+### Загрузка реального фото для smoke-теста
+
+```bash
+cd cv-service
+python scripts/fetch_sample_image.py   # один раз: ~40KB Pexels JPEG
 ```
 
 ### Backend-интеграция

@@ -107,6 +107,19 @@ cv-install:	## Создать venv и поставить зависимости 
 	  fastapi 'uvicorn[standard]' pydantic pydantic-settings \
 	  python-multipart Pillow httpx pytest pytest-asyncio ruff black mypy
 
+cv-install-full:	## + ultralytics + torch CPU (полный ML-стек)
+	cv-service/.venv/Scripts/python.exe -m pip install \
+	  ultralytics torch --index-url https://download.pytorch.org/whl/cpu
+
+cv-smoke:	## Smoke-тест YOLOv8 на реальном фото (требует ultralytics+torch)
+	cd cv-service && .venv/Scripts/python.exe -m pytest tests/test_coco_smoke.py -v
+
+synth-demo:	## Демо: сгенерить синтетику + прогнать через YOLOv8 (in-process)
+	cd cv-service && .venv/Scripts/python.exe -m app.synth_demo
+
+synth-demo-http:	## Демо через HTTP CV-сервис (нужен запущенный make cv-dev)
+	cd cv-service && .venv/Scripts/python.exe -m app.synth_demo --url http://localhost:8000
+
 # ---------- Cleanup ----------
 
 clean-pycache:	## Удалить __pycache__ / .pyc

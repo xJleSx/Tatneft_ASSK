@@ -57,6 +57,8 @@ function Show-Help {
         "  cv-test     pytest cv-service/tests/ (MockDetector, no torch)"
         "  cv-lint     ruff + mypy for cv-service"
         "  cv-install  create cv-service/.venv + install deps (no torch)"
+        "  cv-smoke    smoke-test YOLOv8 on real photo (needs ultralytics+torch)"
+        "  synth-demo  generate synthetic + run YOLOv8 (in-process)"
         "  clean       remove __pycache__, build, dist, .egg-info"
     ) | ForEach-Object { Write-Host $_ }
 }
@@ -94,7 +96,7 @@ try {
         "docker-down" { Pop-Location; docker compose down; return }
         "docker-logs" { Pop-Location; docker compose logs -f api; return }
         "docker-logs-cv" { Pop-Location; docker compose logs -f cv; return }
-        "cv-dev"      { Pop-Location; uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --app-dir cv-service; return }
+        "cv-dev"      { Push-Location cv-service; uvicorn app.main:app --reload --host 0.0.0.0 --port 8000; Pop-Location; return }
         "cv-test"     { Pop-Location; python -m pytest cv-service/tests/ -v; return }
         "cv-test-fast"{ Pop-Location; python -m pytest cv-service/tests/ -q; return }
         "cv-lint"     { Pop-Location; ruff check cv-service/app cv-service/tests; python -m mypy cv-service/app; return }
@@ -107,6 +109,14 @@ try {
                 python-multipart Pillow httpx pytest pytest-asyncio ruff black mypy
             return
         }
+        "cv-install-full" {
+            Pop-Location
+            & cv-service/.venv/Scripts/python.exe -m pip install `
+                ultralytics torch --index-url https://download.pytorch.org/whl/cpu
+            return
+        }
+        "cv-smoke"    { Pop-Location; python -m pytest cv-service/tests/test_coco_smoke.py -v; return }
+        "synth-demo"  { Pop-Location; python -m app.synth_demo; return }
         "clean" {
             Pop-Location
             Get-ChildItem -Recurse -Directory -Filter __pycache__ -ErrorAction SilentlyContinue |
