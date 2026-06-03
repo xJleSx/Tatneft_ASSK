@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,6 +16,9 @@ from app.models.telemetry import TelemetryReading
 from app.models.user import User
 
 router = APIRouter(prefix="/telemetry", tags=["telemetry"])
+
+# Чтобы клиент не мог забрать всю БД за год одной выборкой.
+MAX_HISTORY_HOURS = 168  # неделя
 
 
 @router.get("/equipment/{equipment_id}/snapshot")
@@ -30,11 +33,21 @@ async def snapshot(
 @router.get("/equipment/{equipment_id}/history")
 async def history(
     equipment_id: UUID,
-    hours: int = 24,
+    hours: int = Query(
+        24,
+        ge=1,
+        le=MAX_HISTORY_HOURS,
+        description=f"Окно истории в часах, максимум {MAX_HISTORY_HOURS} (неделя).",
+    ),
     session: AsyncSession = Depends(get_session),
     _: User = Depends(get_current_user),
 ) -> list[dict]:
     """История из БД (накопленная при опросе)."""
+    if hours < 1 or hours > MAX_HISTORY_HOURS:
+        raise HTTPException(
+            400,
+            f"hours должно быть в [1, {MAX_HISTORY_HOURS}]",
+        )
     since = datetime.now(UTC) - timedelta(hours=hours)
     rows = (
         await session.scalars(
