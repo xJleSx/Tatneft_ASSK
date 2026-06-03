@@ -22,14 +22,16 @@ dependencies = [
     "python-jose[cryptography]>=3.3.0",
     "bcrypt>=4.0.0",
     "python-multipart>=0.0.12",
-    "minio>=7.2.9",
-    "redis>=5.2.0",
     "httpx>=0.27.2",
     "structlog>=24.4.0",
-    "tenacity>=9.0.0",
-    "numpy>=2.1.0",
     "Pillow>=11.0.0",
 ]
+
+# Планируется, но пока не используется кодом:
+#   - minio>=7.2.9   # фото-адаптер (план из docs/analogs.md)
+#   - redis>=5.2.0   # кэш/сессии (нужен для 3+ инстансов)
+#   - numpy>=2.1.0   # статистика для anomaly_detector
+#   - tenacity>=9.0.0  # retry для внешних API (OPC-UA, ASUTP)
 
 [project.optional-dependencies]
 dev = [
@@ -39,7 +41,6 @@ dev = [
     "ruff>=0.7.0",
     "black>=24.10.0",
     "mypy>=1.13.0",
-    "faker>=30.0.0",
     "pre-commit>=4.0.0",
 ]
 

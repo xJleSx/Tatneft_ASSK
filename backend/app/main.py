@@ -34,6 +34,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 def create_app() -> FastAPI:
+    # В prod отключаем публичные /docs, /redoc, /openapi.json — нельзя отдавать
+    # внутреннюю структуру API наружу.
+    is_dev = settings.app_env == "dev"
     app = FastAPI(
         title="АСКК Татнефть-Добыча — API",
         version="0.1.0",
@@ -42,6 +45,9 @@ def create_app() -> FastAPI:
             "Документация OpenAPI: /docs, /redoc"
         ),
         lifespan=lifespan,
+        docs_url="/docs" if is_dev else None,
+        redoc_url="/redoc" if is_dev else None,
+        openapi_url="/openapi.json" if is_dev else None,
     )
 
     app.add_middleware(
