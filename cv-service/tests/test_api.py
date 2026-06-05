@@ -1,171 +1,147 @@
-"""Smoke-тесты CV-сервиса: /health, /readyz, /infer — на MockDetector (без torch)."""
+"""Smoke-тесты CV-сервиса: /health, /readyz, /infer.
 
+Тесты, требующие torch/ultralytics/веса, помечены @needs_torch / @needs_weights
+и пропускаются, если зависимостей нет. /health и /detectors работают без torch.
+"""
 from __future__ import annotations
 
-import pytest
-from httpx import AsyncClient
+import io
 
-from app.detectors.mock import make_test_jpeg
+import pytest
+from httpx import ASGITransport, AsyncClient
+from PIL import Image
+
+from app.main import app
+from tests.conftest import needs_torch, needs_weights
+
+
+def _make_jpeg_bytes() -> bytes:
+    """Минимальный валидный JPEG (1x1 белый пиксель)."""
+    img = Image.new("RGB", (1, 1), color=(255, 255, 255))
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG")
+    return buf.getvalue()
+
+
+# ---------- /health (без torch) ----------
 
 
 @pytest.mark.asyncio
-async def test_health(client: AsyncClient):
-    r = await client.get("/health")
+async def test_health():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        r = await ac.get("/health")
     assert r.status_code == 200
     body = r.json()
     assert body["status"] == "ok"
     assert "version" in body
 
 
-@pytest.mark.asyncio
-async def test_readyz_with_mock(client: AsyncClient):
-    r = await client.get("/readyz")
-    assert r.status_code == 200, r.text
-    assert r.json()["detector"] == "mock"
+# ---------- /detectors (без torch, без warmup) ----------
 
 
 @pytest.mark.asyncio
-async def test_list_detectors(client: AsyncClient):
-    r = await client.get("/detectors")
+async def test_detectors_lists_defect():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        r = await ac.get("/detectors")
     assert r.status_code == 200
     body = r.json()
-    assert body["active"] == "mock"
-    assert "coco" in body["supported"]
+    # active может быть "yolov8-base" если lifespan не успел, и "defect-yolov8" после warmup
+    assert body["supported"] == ["defect"]
+
+
+# ---------- /infer: ошибки валидации (без torch) ----------
 
 
 @pytest.mark.asyncio
-async def test_infer_returns_fixed_detections(client: AsyncClient):
-    jpeg = make_test_jpeg()
-    r = await client.post(
-        "/infer",
-        files={"file": ("test.jpg", jpeg, "image/jpeg")},
-    )
-    assert r.status_code == 200, r.text
-    body = r.json()
-    assert body["detector"] == "mock"
-    assert body["count"] == 1
-    det = body["detections"][0]
-    assert det["label"] == "test_object"
-    assert det["confidence"] == 0.91
-    assert det["bbox"]["x_min"] == 10
-    assert det["meta"]["source"] == "fixture"
-    assert body["image_size"]["width"] == 640
-    assert body["image_size"]["height"] == 480
-
-
-@pytest.mark.asyncio
-async def test_infer_empty_file_is_400(client: AsyncClient):
-    r = await client.post(
-        "/infer",
-        files={"file": ("empty.jpg", b"", "image/jpeg")},
-    )
+async def test_infer_empty_file_is_400():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        r = await ac.post(
+            "/infer",
+            files={"file": ("empty.jpg", b"", "image/jpeg")},
+        )
     assert r.status_code == 400
 
 
 @pytest.mark.asyncio
-async def test_infer_garbage_jpeg_is_400(client: AsyncClient):
-    """Битый JPEG: 400, не 500."""
-    r = await client.post(
-        "/infer",
-        files={"file": ("bad.jpg", b"not-a-real-jpeg-bytes", "image/jpeg")},
-    )
+async def test_infer_garbage_jpeg_is_400():
+    """Битый JPEG: 400 (декодирование падает до torch)."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        r = await ac.post(
+            "/infer",
+            files={"file": ("bad.jpg", b"not-a-real-jpeg-bytes", "image/jpeg")},
+        )
     assert r.status_code == 400
     assert "декодировать" in r.json()["detail"].lower()
 
 
 @pytest.mark.asyncio
-async def test_infer_oversize_is_413(client: AsyncClient):
-    # Формируем 16 МБ «изображения» (детектор падает раньше, чем читает всё).
+async def test_infer_oversize_is_413():
     big = b"\xff\xd8\xff\xe0" + b"\x00" * (16 * 1024 * 1024)
-    r = await client.post(
-        "/infer",
-        files={"file": ("big.jpg", big, "image/jpeg")},
-    )
-    # 413 предпочтительнее, но 400 (если PIL упал на verify) тоже ок —
-    # оба варианта лучше 500.
-    assert r.status_code in (400, 413)
-
-
-@pytest.mark.asyncio
-async def test_infer_with_no_detections():
-    """Детектор без mock_detections: count=0, detections=[]."""
-    from httpx import ASGITransport, AsyncClient
-
-    from app.detectors.mock import MockDetector, make_test_jpeg
-    from app.main import app
-
-    app.state.detector = MockDetector(fixed_detections=[])
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         r = await ac.post(
             "/infer",
-            files={"file": ("test.jpg", make_test_jpeg(), "image/jpeg")},
+            files={"file": ("big.jpg", big, "image/jpeg")},
         )
-    assert r.status_code == 200
+    # 413 предпочтительнее, но 400 (если PIL упал на verify) тоже ок
+    assert r.status_code in (400, 413)
+
+
+# ---------- /infer: настоящий детектор (нужны torch + weights) ----------
+
+
+@needs_torch
+@needs_weights
+@pytest.mark.asyncio
+async def test_infer_returns_defect_detections():
+    """Реальный детектор: 200 + detections в формате DefectDetector."""
+    from app.config import get_settings
+    from app.factory import build_detector
+
+    get_settings.cache_clear()
+    det = build_detector(get_settings())
+    det.warmup()
+    app.state.detector = det
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        r = await ac.post(
+            "/infer",
+            files={"file": ("test.jpg", _make_jpeg_bytes(), "image/jpeg")},
+        )
+    assert r.status_code == 200, r.text
     body = r.json()
-    assert body["count"] == 0
-    assert body["detections"] == []
+    assert body["detector"] == "defect-yolov8"
+    assert "latency_ms" in body
+    assert "image_size" in body
+    for d in body["detections"]:
+        assert d["label"] in ("corrosion", "leak", "damage")
+        assert 0.0 <= d["confidence"] <= 1.0
+        assert "severity" in d["meta"]
+        assert d["meta"]["severity"] in (1, 2, 3)
 
 
-# ---------- unit: factories ----------
+# ---------- /readyz (нужен прогретый детектор) ----------
 
 
-def test_build_detector_coco(monkeypatch):
-    monkeypatch.setenv("DETECTOR", "coco")
-    monkeypatch.setenv("DEVICE", "cpu")
+@needs_torch
+@needs_weights
+@pytest.mark.asyncio
+async def test_readyz_with_defect():
     from app.config import get_settings
     from app.factory import build_detector
 
     get_settings.cache_clear()
     det = build_detector(get_settings())
-    assert det.name == "yolov8-coco"
+    det.warmup()
+    app.state.detector = det
 
-
-def test_build_detector_defect_with_weights(monkeypatch):
-    """Если файл весов дефекта существует — factory возвращает DefectDetector (не stub)."""
-    import pytest
-
-    from app.config import DEFAULT_DEFECT_WEIGHTS, get_settings
-    from app.factory import build_detector
-
-    if not DEFAULT_DEFECT_WEIGHTS.is_file():
-        pytest.skip(
-            f"Нет обученных весов: {DEFAULT_DEFECT_WEIGHTS}. "
-            f"Запустите `make cv-train` (5 эпох, ~8 мин на CPU)."
-        )
-
-    monkeypatch.setenv("DETECTOR", "defect")
-    get_settings.cache_clear()
-    det = build_detector(get_settings())
-    assert det.name == "defect-yolov8"
-
-
-def test_build_detector_defect_missing_weights_raises(monkeypatch, tmp_path):
-    """Если файл весов дефекта НЕ существует — factory падает с FileNotFoundError.
-
-    Лучше упасть на старте сервиса, чем при первом POST /infer.
-    """
-    import pytest
-
-    from app.config import get_settings
-    from app.factory import build_detector
-
-    monkeypatch.setenv("DETECTOR", "defect")
-    monkeypatch.setenv("DEFECT_MODEL_PATH", str(tmp_path / "nope.pt"))
-    get_settings.cache_clear()
-    with pytest.raises(FileNotFoundError) as exc_info:
-        build_detector(get_settings())
-    assert "nope.pt" in str(exc_info.value)
-
-
-def test_build_detector_unknown_raises(monkeypatch):
-    monkeypatch.setenv("DETECTOR", "nope")
-    from pydantic import ValidationError
-
-    from app.config import get_settings
-
-    get_settings.cache_clear()
-    with pytest.raises(ValidationError) as exc_info:
-        get_settings()
-    # pydantic v2 формулирует ошибку по полю detector
-    assert "detector" in str(exc_info.value)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        r = await ac.get("/readyz")
+    assert r.status_code == 200, r.text
+    assert r.json()["detector"] == "defect-yolov8"

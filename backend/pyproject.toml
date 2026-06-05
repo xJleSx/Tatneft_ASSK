@@ -6,8 +6,11 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Proprietary" }
 authors = [
-    { name = "Опик М.Ю." },
-    { name = "Алейников Н.В." },
+    { name = "Опик М.Ю.",     email = "opik@tatneft.local" },
+    { name = "Алейников Н.В.", email = "aleynikov@tatneft.local" },
+    { name = "Рязанцев К.А.",  email = "ryazantsev@tatneft.local" },
+    { name = "Соловьев Д.С.",  email = "solovyov@tatneft.local" },
+    { name = "Швецова А.И.",   email = "shvetsova@tatneft.local" },
 ]
 
 dependencies = [
@@ -18,7 +21,6 @@ dependencies = [
     "pydantic-settings>=2.6.0",
     "sqlalchemy[asyncio]>=2.0.36",
     "asyncpg>=0.30.0",
-    "alembic>=1.14.0",
     "python-jose[cryptography]>=3.3.0",
     "bcrypt>=4.0.0",
     "python-multipart>=0.0.12",
@@ -51,7 +53,7 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["app*"]
-exclude = ["tests*", "alembic*"]
+exclude = ["tests*"]
 
 [tool.ruff]
 line-length = 100
@@ -74,7 +76,7 @@ indent-style = "space"
 line-length = 100
 target-version = ["py311"]
 include = '\.pyi?$'
-extend-exclude = '''/(\.git|\.venv|venv|build|dist|alembic)/'''
+extend-exclude = '''/(\.git|\.venv|venv|build|dist)/'''
 
 [tool.mypy]
 python_version = "3.11"
@@ -86,10 +88,6 @@ check_untyped_defs = true
 disallow_incomplete_defs = true
 ignore_missing_imports = true
 plugins = ["pydantic.mypy"]
-exclude = ["alembic/", "tests/", "scripts/"]
+exclude = ["tests/", "scripts/"]
 mypy_path = "."
-
-[tool.pytest.ini_options]
-asyncio_mode = "auto"
-testpaths = ["tests"]
 pythonpath = ["."]

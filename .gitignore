@@ -31,8 +31,6 @@ build/
 # Local photo storage (dev only)
 backend/app/photos_storage/
 
-# CV models / weights
-cv-service/models/
-cv-service/weights/
-*.pt
-*.onnx
+# Pip caches (dev only)
+backend/.cache/
+backend/.local/

@@ -1,11 +1,12 @@
 """Фабрика детекторов по настройкам.
 
-Используется при старте CV-сервиса. Пересоздаёт детектор при изменении
-`detector` в env (hot-reload не реализован — перезапуск сервиса).
+Используется при старте CV-сервиса. Единственная поддерживаемая
+конфигурация: `DETECTOR=defect` (YOLOv8, обученная на 3 классах
+дефектов оборудования: corrosion / leak / damage).
 
-При DETECTOR=defect обязателен существующий файл весов. Если его нет —
-падаем с FileNotFoundError, чтобы оператор увидел проблему в логах при
-старте, а не при первом /infer.
+При старте обязателен существующий файл весов (`weights/defect.pt`).
+Если его нет — падаем с FileNotFoundError, чтобы оператор увидел
+проблему в логах при старте, а не при первом /infer.
 """
 from __future__ import annotations
 
@@ -13,23 +14,13 @@ import logging
 
 from app.config import Settings
 from app.detectors.base import BaseDetector
-from app.detectors.coco import CocoDetector
 from app.detectors.defect import DefectDetector
-from app.detectors.mock import MockDetector
 
 log = logging.getLogger(__name__)
 
 
 def build_detector(settings: Settings) -> BaseDetector:
     kind = settings.detector.lower()
-    if kind == "coco":
-        log.info("Building CocoDetector (path=%s, device=%s)", settings.model_path, settings.device)
-        return CocoDetector(
-            model_path=settings.model_path,
-            device=settings.device,
-            conf=settings.confidence,
-            iou=settings.iou,
-        )
     if kind == "defect":
         log.info(
             "Building DefectDetector (path=%s, device=%s, conf=%.2f)",
@@ -43,7 +34,4 @@ def build_detector(settings: Settings) -> BaseDetector:
             conf=settings.defect_confidence,
             iou=settings.defect_iou,
         )
-    if kind == "mock":
-        log.info("Building MockDetector (no weights)")
-        return MockDetector()
     raise ValueError(f"Unknown detector: {settings.detector!r}")

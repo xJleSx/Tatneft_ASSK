@@ -24,7 +24,7 @@ services:
       timeout: 5s
       retries: 3
       start_period: 15s
-    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    command: sh -c "uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
 
   cv:
     build: ./cv-service
@@ -32,16 +32,14 @@ services:
     env_file: ./cv-service/.env
     ports:
       - "8001:8000"
-    volumes:
-      # Кэш весов YOLO (один раз скачали — у всех рестартов)
-      - cv_models:/app/models
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/health"]
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 30s   # первый запуск: скачивание yolov8n.pt + warmup
+      start_period: 30s   # первый запуск: warmup YOLO на weights/defect.pt
     # CV_ENABLED на стороне api: см. CV_SERVICE_URL=http://cv:8000
+    # Веса defect.pt едут в образ (см. cv-service/Dockerfile: COPY weights)
 
   postgres:
     image: timescale/timescaledb:latest-pg16
@@ -107,4 +105,3 @@ services:
 volumes:
   pgdata:
   minio_data:
-  cv_models:

@@ -57,9 +57,6 @@ class Settings(BaseSettings):
 
     redis_url: str = "redis://localhost:6379/0"
 
-    asutp_mode: Literal["mock", "opcua", "rest"] = "mock"
-    asutp_mock_interval_sec: int = 60
-
     # CV-сервис (YOLOv8 и т.п.) — отдельный микросервис в docker-compose
     cv_service_url: str = "http://cv:8000"
     cv_timeout_s: float = 30.0

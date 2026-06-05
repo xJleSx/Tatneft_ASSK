@@ -1,44 +1,41 @@
-"""conftest: подменяем app.state.detector на MockDetector."""
+"""conftest: фикстуры для тестов CV-сервиса.
 
+Тесты, требующие torch/ultralytics/веса, пропускаются если их нет.
+Без torch тестируем только /health и статические части /detectors.
+"""
 from __future__ import annotations
 
 import os
-
-# До любых импортов app.* выставляем детектор=mock (без torch/ultralytics)
-os.environ.setdefault("APP_ENV", "dev")
-os.environ.setdefault("DETECTOR", "mock")
+from pathlib import Path
 
 import pytest
-from httpx import ASGITransport, AsyncClient
 
-from app.detectors.base import Detection
-from app.detectors.mock import MockDetector
-from app.main import app
+# Прячем DETECTOR от .env, чтобы Settings() не падал на чём-то неожиданном.
+os.environ.setdefault("APP_ENV", "dev")
 
 
-@pytest.fixture
-def mock_detector() -> MockDetector:
-    return MockDetector(
-        fixed_detections=[
-            Detection(
-                label="test_object",
-                confidence=0.91,
-                x_min=10,
-                y_min=20,
-                x_max=110,
-                y_max=120,
-                detector="mock",
-                meta={"source": "fixture"},
-            )
-        ]
-    )
+def _has_torch() -> bool:
+    try:
+        import torch  # noqa: F401
+        import ultralytics  # noqa: F401
+        return True
+    except ImportError:
+        return False
 
 
-@pytest.fixture
-async def client(mock_detector) -> AsyncClient:
-    """AsyncClient с подменой детектора на MockDetector (без torch)."""
-    app.state.detector = mock_detector
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        yield ac
-    # Не очищаем app.state — следующий тест перезапишет.
+def _has_weights() -> bool:
+    from app.config import DEFAULT_DEFECT_WEIGHTS
+
+    return Path(DEFAULT_DEFECT_WEIGHTS).is_file()
+
+
+needs_torch = pytest.mark.skipif(
+    not _has_torch(),
+    reason="torch/ultralytics не установлены",
+)
+
+
+needs_weights = pytest.mark.skipif(
+    not _has_weights(),
+    reason=f"Нет весов дефектов: {Path(__file__).parent.parent / 'weights' / 'defect.pt'}",
+)

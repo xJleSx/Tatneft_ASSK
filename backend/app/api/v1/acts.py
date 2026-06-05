@@ -19,9 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, require_roles
 from app.db.session import get_session
-from app.integrations.asutp.factory import get_asutp_adapter
 from app.models.act import Act, ActStatus, ChecklistResponse, assert_act_transition
-from app.models.equipment import Equipment
 from app.models.order import WorkOrder, WorkOrderStatus, assert_transition
 from app.models.photo import Photo, PhotoKind
 from app.models.user import User, UserRole
@@ -105,7 +103,7 @@ async def get_act_detail(
                 "id": str(p.id),
                 "kind": p.kind.value,
                 "object_key": p.object_key,
-                "url": f"/api/v1/acts/photos/{p.id}",
+                "url": f"/acts/photos/{p.id}",
                 "content_type": p.content_type,
                 "size_bytes": p.size_bytes,
                 "taken_at": p.taken_at.isoformat() if p.taken_at else None,
@@ -209,29 +207,16 @@ async def submit_act(
     act.actual_latitude = body.actual_latitude
     act.actual_longitude = body.actual_longitude
 
-    # 3) Снимок телеметрии equipment объекта
+    # 3) Снимок телеметрии: в текущей версии интеграции с АСУ ТП нет,
+    # оставляем пустые словари — Rule Engine работает без них, в seed-данных
+    # снапшоты заполняются отдельно в `app.mocks.generators.seed`.
+    act.telemetry_after_json = {}
+    if act.telemetry_before_json is None:
+        act.telemetry_before_json = {}
+
     wo = await session.get(WorkOrder, act.work_order_id)
     if wo is None:
         raise HTTPException(404, "Наряд-заказ не найден")
-    equipment_list = (
-        await session.scalars(select(Equipment).where(Equipment.object_id == wo.object_id))
-    ).all()
-
-    adapter = get_asutp_adapter()
-    after_snapshots: dict[str, dict] = {}
-    before_snapshots: dict[str, dict] = {}
-    for eq in equipment_list:
-        snap = await adapter.get_snapshot(eq.id, at=body.actual_at)
-        after_snapshots[eq.serial_number] = snap["params"]
-        if act.telemetry_before_json is None:
-            # первый раз — сохраняем "до" со сдвигом 1 час назад
-            before_snap = await adapter.get_snapshot(
-                eq.id, at=body.actual_at.replace(hour=max(0, body.actual_at.hour - 1))
-            )
-            before_snapshots[eq.serial_number] = before_snap["params"]
-    act.telemetry_after_json = after_snapshots
-    if act.telemetry_before_json is None:
-        act.telemetry_before_json = before_snapshots
 
     # 4) Меняем статус на submitted
     act.status = ActStatus.SUBMITTED
@@ -424,7 +409,7 @@ async def upload_photo(
         "id": str(photo.id),
         "kind": photo.kind.value,
         "size_bytes": photo.size_bytes,
-        "url": f"/api/v1/acts/photos/{photo.id}",
+        "url": f"/acts/photos/{photo.id}",
         "taken_at": photo.taken_at.isoformat() if photo.taken_at else None,
         "latitude": str(photo.latitude) if photo.latitude is not None else None,
         "longitude": str(photo.longitude) if photo.longitude is not None else None,

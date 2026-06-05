@@ -1,7 +1,7 @@
 <#
 Thin wrapper around GNU make for Windows PowerShell.
 Uses the same Makefile as *nix. Falls back to direct invocations
-of pytest / ruff / mypy / alembic if GNU make is not installed.
+of pytest / ruff / mypy if GNU make is not installed.
 
 Usage:
     powershell -NoProfile -ExecutionPolicy Bypass -File make.ps1           # help
@@ -46,24 +46,18 @@ function Show-Help {
         "  fmt         black app tests + ruff --fix"
         "  typecheck   mypy app"
         "  ci          lint + typecheck + test-fast"
-        "  migrate     alembic upgrade head"
-        "  revision    alembic revision --autogenerate -m <msg>"
         "  seed        python -m app.mocks.generators.seed"
+        "  seed-clean  drop and recreate demo data"
         "  dev         uvicorn app.main:app --reload"
         "  docker-up   docker compose up -d"
         "  docker-down docker compose down"
         "  docker-logs docker compose logs -f api"
+        "  docker-logs-cv docker compose logs -f cv"
+        "  db-shell    docker compose exec postgres psql -U askk -d askk"
         "  cv-dev      uvicorn cv-service/app.main:app --reload (port 8000)"
-        "  cv-test     pytest cv-service/tests/ (MockDetector, no torch)"
+        "  cv-test     pytest cv-service/tests/ (skip torch/weights if missing)"
         "  cv-lint     ruff + mypy for cv-service"
-        "  cv-install  create cv-service/.venv + install deps (no torch)"
-        "  cv-smoke    smoke-test YOLOv8 on real photo (needs ultralytics+torch)"
-        "  cv-synth-data  generate synthetic defect dataset (corrosion/leak/damage)"
-        "  cv-train       train YOLOv8n on synthetic (~8 min for 5 epochs on CPU)"
-        "  cv-train-quick 5-epoch train (smoke-check pipeline)"
-        "  cv-eval        validate trained model (mAP50/mAP50-95)"
-        "  cv-defect-smoke  smoke-test DefectDetector on val images (needs weights+torch)"
-        "  synth-demo  generate synthetic + run YOLOv8 (in-process)"
+        "  cv-install  create cv-service/.venv + install deps"
         "  clean       remove __pycache__, build, dist, .egg-info"
     ) | ForEach-Object { Write-Host $_ }
 }
@@ -90,18 +84,18 @@ try {
             if ($LASTEXITCODE) { exit $LASTEXITCODE }
             pytest tests/ -q
         }
-        "migrate"     { alembic upgrade head }
-        "revision" {
-            $msg = if ($Targets.Count -gt 1) { $Targets[1] } else { "auto" }
-            alembic revision --autogenerate -m $msg
-        }
         "seed"        { python -m app.mocks.generators.seed }
+        "seed-clean"  {
+            python -c "from app.mocks.generators.seed import clean_db; import asyncio; asyncio.run(clean_db())"
+            python -m app.mocks.generators.seed
+        }
         "dev"         { uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 }
         "docker-up"   { Pop-Location; docker compose up -d; return }
         "docker-down" { Pop-Location; docker compose down; return }
         "docker-logs" { Pop-Location; docker compose logs -f api; return }
         "docker-logs-cv" { Pop-Location; docker compose logs -f cv; return }
-        "cv-dev"      { Push-Location cv-service; uvicorn app.main:app --reload --host 0.0.0.0 --port 8000; Pop-Location; return }
+        "db-shell"    { Pop-Location; docker compose exec postgres psql -U askk -d askk; return }
+        "cv-dev"      { Pop-Location; Push-Location cv-service; uvicorn app.main:app --reload --host 0.0.0.0 --port 8000; Pop-Location; return }
         "cv-test"     { Pop-Location; python -m pytest cv-service/tests/ -v; return }
         "cv-test-fast"{ Pop-Location; python -m pytest cv-service/tests/ -q; return }
         "cv-lint"     { Pop-Location; ruff check cv-service/app cv-service/tests; python -m mypy cv-service/app; return }
@@ -109,24 +103,9 @@ try {
             Pop-Location
             python -m venv cv-service/.venv
             & cv-service/.venv/Scripts/python.exe -m pip install -U pip
-            & cv-service/.venv/Scripts/python.exe -m pip install `
-                fastapi 'uvicorn[standard]' pydantic pydantic-settings `
-                python-multipart Pillow httpx pytest pytest-asyncio ruff black mypy
+            & cv-service/.venv/Scripts/python.exe -m pip install -e cv-service
             return
         }
-        "cv-install-full" {
-            Pop-Location
-            & cv-service/.venv/Scripts/python.exe -m pip install `
-                ultralytics torch --index-url https://download.pytorch.org/whl/cpu
-            return
-        }
-        "cv-smoke"    { Pop-Location; python -m pytest cv-service/tests/test_coco_smoke.py -v; return }
-        "cv-synth-data" { Pop-Location; & cv-service/.venv/Scripts/python.exe cv-service/scripts/synth_train_data.py --count 400 --val 100 --out cv-service/dataset; return }
-        "cv-train"    { Pop-Location; & cv-service/.venv/Scripts/python.exe cv-service/scripts/yolo_train.py; return }
-        "cv-train-quick" { Pop-Location; & cv-service/.venv/Scripts/python.exe cv-service/scripts/yolo_train.py --epochs 5; return }
-        "cv-eval"     { Pop-Location; & cv-service/.venv/Scripts/python.exe -c "from ultralytics import YOLO; m = YOLO('cv-service/models/defect_yolov8n_v1/weights/best.pt'); m.val(data='cv-service/dataset/data.yaml')"; return }
-        "cv-defect-smoke" { Pop-Location; python -m pytest cv-service/tests/test_defect_smoke.py -v; return }
-        "synth-demo"  { Pop-Location; python -m app.synth_demo; return }
         "clean" {
             Pop-Location
             Get-ChildItem -Recurse -Directory -Filter __pycache__ -ErrorAction SilentlyContinue |

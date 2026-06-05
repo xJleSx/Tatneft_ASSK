@@ -4,15 +4,13 @@
 # Все команды изолированы в `backend/`. Перед первым запуском:
 #   1. cp backend/.env.example backend/.env
 #   2. docker compose up -d
-#   3. make migrate && make seed
-#   4. make dev
+#   3. make seed   (засеять БД демо-данными)
+#   4. make dev    (запустить API)
 
 .PHONY: help install dev test test-fast test-cov lint fmt typecheck ci \
-        migrate revision seed seed-clean docker-up docker-down docker-logs \
+        seed seed-clean docker-up docker-down docker-logs \
         db-shell clean clean-pycache clean-build \
-        cv-dev cv-test cv-test-fast cv-lint cv-install cv-install-full \
-        cv-smoke cv-synth-data cv-train cv-eval cv-defect-smoke \
-        synth-demo synth-demo-http
+        cv-dev cv-test cv-test-fast cv-lint cv-install
 
 # ---------- Meta ----------
 
@@ -59,13 +57,7 @@ ci: lint typecheck test-fast	## Полный CI-прогон (как в .github/
 
 # ---------- DB ----------
 
-migrate:	## Применить миграции Alembic
-	cd backend && alembic upgrade head
-
-revision:	## Создать новую миграцию (msg=...)
-	cd backend && alembic revision --autogenerate -m "$(msg)"
-
-seed:	## Засеять БД демо-данными
+seed:	## Засеять БД демо-данными (6 подрядчиков, 4 пользователя, наряды, акты, телеметрия)
 	cd backend && python -m app.mocks.generators.seed
 
 seed-clean:	## Очистить и пересоздать демо-данные
@@ -73,7 +65,7 @@ seed-clean:	## Очистить и пересоздать демо-данные
 
 # ---------- Docker ----------
 
-docker-up:	## Поднять postgres+timescale, minio, redis, api
+docker-up:	## Поднять postgres+timescale, minio, redis, api, cv
 	docker compose up -d
 
 docker-down:	## Остановить и удалить контейнеры (тома сохраняются)
@@ -93,50 +85,20 @@ db-shell:	## Подключиться к Postgres (psql через docker)
 cv-dev:	## Запустить CV-сервис локально (uvicorn с reload)
 	cd cv-service && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
-cv-test:	## Тесты CV-сервиса (без torch — на MockDetector)
-	cd cv-service && .venv/Scripts/python.exe -m pytest tests/ -v
+cv-test:	## Тесты CV-сервиса (помеченные @needs_torch/weights — skip без зависимостей)
+	cd cv-service && python -m pytest tests/ -v
 
 cv-test-fast:	## Быстрый прогон CV-тестов
-	cd cv-service && .venv/Scripts/python.exe -m pytest tests/ -q
+	cd cv-service && python -m pytest tests/ -q
 
 cv-lint:	## ruff + mypy для CV-сервиса
-	cd cv-service && .venv/Scripts/python.exe -m ruff check app tests
-	cd cv-service && .venv/Scripts/python.exe -m mypy app
+	cd cv-service && python -m ruff check app tests
+	cd cv-service && python -m mypy app
 
-cv-install:	## Создать venv и поставить зависимости CV-сервиса (без torch)
+cv-install:	## Создать venv и поставить зависимости CV-сервиса (с torch CPU)
 	python -m venv cv-service/.venv
 	cv-service/.venv/Scripts/python.exe -m pip install -U pip
-	cv-service/.venv/Scripts/python.exe -m pip install \
-	  fastapi 'uvicorn[standard]' pydantic pydantic-settings \
-	  python-multipart Pillow httpx pytest pytest-asyncio ruff black mypy
-
-cv-install-full:	## + ultralytics + torch CPU (полный ML-стек)
-	cv-service/.venv/Scripts/python.exe -m pip install \
-	  ultralytics torch --index-url https://download.pytorch.org/whl/cpu
-
-cv-smoke:	## Smoke-тест YOLOv8 на реальном фото (требует ultralytics+torch)
-	cd cv-service && .venv/Scripts/python.exe -m pytest tests/test_coco_smoke.py -v
-
-cv-synth-data:	## Сгенерить синтетический датасет дефектов (corrosion/leak/damage)
-	cd cv-service && .venv/Scripts/python.exe scripts/synth_train_data.py --count 400 --val 100 --out dataset
-
-cv-train:	## Дообучить YOLOv8n на синтетике (~8 мин/5 эпох, 30 эпох ≈ 50 мин на CPU)
-	cd cv-service && .venv/Scripts/python.exe scripts/yolo_train.py
-
-cv-train-quick:	## Быстрое обучение (5 эпох, для smoke-проверки пайплайна)
-	cd cv-service && .venv/Scripts/python.exe scripts/yolo_train.py --epochs 5
-
-cv-eval:	## Валидация обученной модели на val (выводит mAP50/mAP50-95)
-	cd cv-service && .venv/Scripts/python.exe -c "from ultralytics import YOLO; m = YOLO('models/defect_yolov8n_v1/weights/best.pt'); m.val(data='dataset/data.yaml')"
-
-cv-defect-smoke:	## Smoke-тест DefectDetector на синтетике (нужны веса + torch)
-	cd cv-service && .venv/Scripts/python.exe -m pytest tests/test_defect_smoke.py -v
-
-synth-demo:	## Демо: сгенерить синтетику + прогнать через YOLOv8 (in-process)
-	cd cv-service && .venv/Scripts/python.exe -m app.synth_demo
-
-synth-demo-http:	## Демо через HTTP CV-сервис (нужен запущенный make cv-dev)
-	cd cv-service && .venv/Scripts/python.exe -m app.synth_demo --url http://localhost:8000
+	cv-service/.venv/Scripts/python.exe -m pip install -e .
 
 # ---------- Cleanup ----------
 

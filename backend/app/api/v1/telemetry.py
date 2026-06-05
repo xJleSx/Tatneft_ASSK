@@ -1,4 +1,4 @@
-"""Telemetry: снимки и история параметров equipment."""
+"""Telemetry: история параметров equipment (из БД)."""
 
 from __future__ import annotations
 
@@ -11,7 +11,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.db.session import get_session
-from app.integrations.asutp.factory import get_asutp_adapter
 from app.models.telemetry import TelemetryReading
 from app.models.user import User
 
@@ -19,15 +18,6 @@ router = APIRouter(prefix="/telemetry", tags=["telemetry"])
 
 # Чтобы клиент не мог забрать всю БД за год одной выборкой.
 MAX_HISTORY_HOURS = 168  # неделя
-
-
-@router.get("/equipment/{equipment_id}/snapshot")
-async def snapshot(
-    equipment_id: UUID,
-    _: User = Depends(get_current_user),
-) -> dict:
-    """Снимок параметров сейчас (мок)."""
-    return await get_asutp_adapter().get_snapshot(equipment_id)
 
 
 @router.get("/equipment/{equipment_id}/history")

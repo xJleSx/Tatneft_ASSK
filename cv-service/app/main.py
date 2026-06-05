@@ -124,7 +124,7 @@ async def list_detectors() -> dict:
     det = app.state.detector
     return {
         "active": det.name,
-        "supported": ["coco", "defect", "mock"],
+        "supported": ["defect"],
     }
 
 

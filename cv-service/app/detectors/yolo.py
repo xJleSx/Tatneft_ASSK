@@ -1,8 +1,8 @@
-"""Общий YOLO-инференс для `CocoDetector` и `DefectDetector`.
+"""YOLO-инференс для `DefectDetector`.
 
 Вынесен в отдельный модуль, чтобы:
 - не дублировать ~50 строк YOLO.predict + postprocess,
-- дать обоим детекторам одинаковый контракт ошибок (400 на битый JPEG),
+- дать детектору понятный контракт ошибок (400 на битый JPEG),
 - держать lazy import ultralytics в одном месте.
 
 Подклассы переопределяют только `name` и (опционально) маппинг классов.
@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import io
 import logging
-from pathlib import Path
 from typing import Any
 
 from PIL import Image
@@ -22,14 +21,13 @@ log = logging.getLogger(__name__)
 
 
 class _YoloBase(BaseDetector):
-    """База для YOLOv8-детекторов (COCO-pretrained или кастомные веса)."""
+    """База для YOLOv8-детекторов с кастомными весами."""
 
-    # Подклассы обязаны задать имя (отображается в /infer и /detectors).
     name: str = "yolov8-base"
 
     def __init__(
         self,
-        model_path: str | None,
+        model_path: str,
         device: str,
         conf: float,
         iou: float,
@@ -38,17 +36,13 @@ class _YoloBase(BaseDetector):
         self._device = device
         self._conf = conf
         self._iou = iou
-        self._model: Any = None  # ultralytics.YOLO; lazy, чтобы тесты с Mock не тянули torch
-
-    # ----- lifecycle -----
+        self._model: Any = None
 
     def warmup(self) -> None:
-        # Импорт тут: ultralytics тяжёлый, тестам с MockDetector не нужен.
         from ultralytics import YOLO
 
-        path = self._model_path or "yolov8n.pt"
-        log.info("Loading YOLO model: %s on %s", path, self._device)
-        self._model = YOLO(path)
+        log.info("Loading YOLO model: %s on %s", self._model_path, self._device)
+        self._model = YOLO(self._model_path)
         try:
             self._model.predict(
                 source=Image.new("RGB", (64, 64), color=(0, 0, 0)),
@@ -59,8 +53,6 @@ class _YoloBase(BaseDetector):
             )
         except Exception as e:
             log.warning("YOLO warmup predict failed (продолжаем): %s", e)
-
-    # ----- inference -----
 
     def detect(self, image_bytes: bytes) -> list[Detection]:
         if self._model is None:
@@ -82,15 +74,7 @@ class _YoloBase(BaseDetector):
             return []
         return self._postprocess(results[0])
 
-    # ----- postprocess -----
-
     def _postprocess(self, result: Any) -> list[Detection]:
-        """Парсим ultralytics result в список Detection.
-
-        По умолчанию берём имена классов из `result.names` (как у CocoDetector).
-        DefectDetector переопределяет, если нужно заменить индексы на свои
-        (например, чтобы положить `severity` в meta).
-        """
         names: dict[int, str] = result.names
         boxes = result.boxes
         if boxes is None:
@@ -119,12 +103,4 @@ class _YoloBase(BaseDetector):
         return out
 
     def _class_meta(self, cls_id: int, label: str) -> dict:
-        """Доп. мета для конкретного класса. По умолчанию — class_id."""
         return {"class_id": int(cls_id)}
-
-
-def model_file_exists(path: str | None) -> bool:
-    """True если путь непустой и файл существует. Используется в factory."""
-    if not path:
-        return False
-    return Path(path).is_file()

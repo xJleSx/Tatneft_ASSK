@@ -24,6 +24,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import get_logger
 from app.core.security import hash_password
+from app.mocks.generators.telemetry_synth import (
+    generate_params,
+    inject_anomalies,
+    stable_seed,
+)
 from app.models.act import Act, ActStatus, ChecklistResponse
 from app.models.contractor import Contractor
 from app.models.equipment import Equipment, EquipmentType
@@ -557,13 +562,12 @@ async def recalc_contractor_ratings(session: AsyncSession) -> int:
 async def seed_telemetry_history(session: AsyncSession, days: int = 3) -> int:
     """Заполняет таблицу telemetry_readings за последние N дней (шаг 15 мин).
 
-    Использует ту же детерминированную функцию, что и MockAsutpAdapter —
+    Использует детерминированный генератор `telemetry_synth.generate_params`,
     чтобы графики в дашборде выглядели «реалистично».
 
     Дополнительно инжектирует 1-2 аномалии в последние 24ч на конкретных
     установках, чтобы детектор нашёл их при первом запуске.
     """
-    from app.integrations.asutp.mock import _generate_params
 
     equipment_list = (await session.scalars(select(Equipment))).all()
     if not equipment_list:
@@ -612,17 +616,10 @@ async def seed_telemetry_history(session: AsyncSession, days: int = 3) -> int:
     while cur <= now:
         in_anom_window = cur >= anomaly_from
         for eq_id, eq_type in eq_types.items():
-            # стабильный seed: equipment_id + minute bucket
-            import hashlib
-
-            bucket = int(cur.timestamp()) // 60
-            seed = int(hashlib.sha256(f"{eq_id}:{bucket}".encode()).hexdigest(), 16) % (2**32)
-            params = _generate_params(eq_type, seed)
-            # Применяем аномалию
+            seed = stable_seed(eq_id, cur)
+            params = generate_params(eq_type, seed)
             if in_anom_window and eq_id in anomaly_targets:
-                for p, mult in anomaly_targets[eq_id].items():
-                    if p in params:
-                        params[p] = round(params[p] * mult, 3)
+                params = inject_anomalies(params, anomaly_targets[eq_id])
             batch.append(
                 TelemetryReading(
                     equipment_id=eq_id,
@@ -662,7 +659,7 @@ async def seed_work_orders_and_acts(
     - 2 акта REJECTED (с замечаниями)
     - 2 акта DELAYED_VERIFICATION (на отложенной проверке)
     """
-    from app.integrations.asutp.mock import _generate_params
+    from app.mocks.generators.telemetry_synth import generate_params
 
     wells = (await session.scalars(select(Object).where(Object.kind == ObjectKind.WELL))).all()
     work_types = (await session.scalars(select(WorkType))).all()
@@ -781,23 +778,11 @@ async def seed_work_orders_and_acts(
         ).all()
         before: dict[str, dict] = {}
         after: dict[str, dict] = {}
-        import hashlib
-
         for eq in equipment_for_well:
-            bseed = int(
-                hashlib.sha256(
-                    f"{eq.id}:{int((completed_at - timedelta(hours=2)).timestamp()) // 60}".encode()
-                ).hexdigest(),
-                16,
-            ) % (2**32)
-            aseed = int(
-                hashlib.sha256(
-                    f"{eq.id}:{int(completed_at.timestamp()) // 60}".encode()
-                ).hexdigest(),
-                16,
-            ) % (2**32)
-            before[eq.serial_number] = _generate_params(eq.type, bseed)
-            after[eq.serial_number] = _generate_params(eq.type, aseed)
+            bseed = stable_seed(eq.id, completed_at - timedelta(hours=2))
+            aseed = stable_seed(eq.id, completed_at)
+            before[eq.serial_number] = generate_params(eq.type, bseed)
+            after[eq.serial_number] = generate_params(eq.type, aseed)
 
         act = Act(
             work_order_id=wo.id,

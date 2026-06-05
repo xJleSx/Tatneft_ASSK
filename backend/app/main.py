@@ -13,6 +13,7 @@ from app.api.v1 import (
     anomalies,
     auth,
     contractors,
+    cv,
     dashboard,
     objects,
     orders,
@@ -21,6 +22,8 @@ from app.api.v1 import (
 )
 from app.core.config import settings
 from app.core.logging import get_logger, setup_logging
+from app.db.base import Base
+from app.db.session import engine
 
 setup_logging()
 log = get_logger("app.main")
@@ -29,6 +32,12 @@ log = get_logger("app.main")
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     log.info("startup", app=settings.app_name, env=settings.app_env)
+    # Схема создаётся через SQLAlchemy create_all — без Alembic.
+    # Для прототипа этого достаточно; production-миграции через отдельный
+    # pipeline (см. README → «Структура БД»).
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    log.info("schema_ready")
     yield
     log.info("shutdown")
 
@@ -72,6 +81,7 @@ def create_app() -> FastAPI:
     app.include_router(telemetry.router, prefix=prefix)
     app.include_router(anomalies.router, prefix=prefix)
     app.include_router(dashboard.router, prefix=prefix)
+    app.include_router(cv.router, prefix=prefix)
 
     return app
 

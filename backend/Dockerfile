@@ -17,8 +17,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY pyproject.toml ./
 COPY app ./app
-COPY alembic ./alembic
-COPY alembic.ini ./
 
 RUN pip install --upgrade pip && \
     pip wheel --wheel-dir=/wheels .
@@ -47,10 +45,8 @@ COPY --from=builder /wheels /wheels
 RUN pip install --no-cache-dir --no-index --find-links=/wheels askk-backend \
     && rm -rf /wheels
 
-# Код и миграции
-COPY --from=builder /build/alembic     ./alembic
-COPY --from=builder /build/alembic.ini ./alembic.ini
-COPY --from=builder /build/app         ./app
+# Код
+COPY --from=builder /build/app ./app
 
 # Каталог для фото и владелец
 RUN mkdir -p /app/photos_storage \
@@ -64,4 +60,4 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
     CMD python -c "import socket; s=socket.socket(); s.settimeout(2); s.connect(('127.0.0.1', 8000)); s.close()" || exit 1
 
-CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

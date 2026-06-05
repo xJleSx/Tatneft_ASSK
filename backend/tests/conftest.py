@@ -12,7 +12,6 @@ os.environ["SECRET_KEY"] = "test-secret-key-for-jwt-only"
 os.environ["JWT_ALGORITHM"] = "HS256"
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
 os.environ["CORS_ORIGINS"] = "http://localhost:3000,http://test"
-os.environ["ASUTP_MODE"] = "mock"
 os.environ["MINIO_BUCKET"] = "askk-photos-test"
 os.environ["GEO_RADIUS_M"] = "75"
 

@@ -704,6 +704,77 @@
     .tabular { font-variant-numeric: tabular-nums; }
 
     /* ============================================================
+       CV demo
+       ============================================================ */
+    .cv-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+      gap: 20px;
+    }
+    .cv-input {
+      display: flex; flex-direction: column; gap: 12px;
+      padding: 16px;
+      background: var(--bg-2);
+      border: 1px solid var(--line);
+    }
+    .cv-input .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .cv-input label { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-family: var(--font-mono); }
+    .cv-input input[type="file"] {
+      flex: 1; min-width: 0; padding: 8px;
+      background: var(--panel); color: var(--ink);
+      border: 1px solid var(--line-2);
+      font-family: var(--font-mono); font-size: 12px;
+    }
+    .cv-input select {
+      padding: 8px 10px;
+      background: var(--panel); color: var(--ink);
+      border: 1px solid var(--line-2);
+      font-family: var(--font-sans); font-size: 13px;
+    }
+    .cv-stage {
+      position: relative;
+      background: var(--bg-2);
+      border: 1px solid var(--line);
+      min-height: 220px;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
+    }
+    .cv-stage img,
+    .cv-stage canvas {
+      position: absolute; top: 0; left: 0;
+      max-width: 100%; max-height: 100%;
+      object-fit: contain;
+    }
+    .cv-stage canvas { pointer-events: none; }
+    .cv-stage .placeholder {
+      color: var(--muted); font-size: 12px; font-family: var(--font-mono);
+      letter-spacing: 0.1em; text-transform: uppercase;
+    }
+    .cv-results {
+      display: flex; flex-direction: column; gap: 8px;
+      max-height: 360px; overflow: auto;
+    }
+    .cv-results .meta {
+      font-family: var(--font-mono); font-size: 11px; color: var(--muted);
+      letter-spacing: 0.05em;
+    }
+    .cv-row {
+      display: grid; grid-template-columns: auto 1fr auto auto;
+      gap: 12px; align-items: center;
+      padding: 8px 10px;
+      background: var(--bg-2);
+      border: 1px solid var(--line);
+      font-size: 12.5px;
+    }
+    .cv-row .swatch { width: 10px; height: 10px; }
+    .cv-row .label { font-weight: 600; }
+    .cv-row .conf { font-family: var(--font-mono); color: var(--ok); }
+    .cv-row .bbox { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+    @media (max-width: 900px) {
+      .cv-layout { grid-template-columns: 1fr; }
+    }
+
+    /* ============================================================
        CONTRACTOR VIEW (mobile-first)
        ============================================================ */
     .field-app {
@@ -984,6 +1055,11 @@
       Тестовые учётки (<code>password</code>):<br/>
       <code>admin@tatneft.ru</code> · <code>manager@</code> · <code>tech@</code> · <code>master@</code> · <code>contractor_*@example.ru</code>
     </div>
+
+    <div class="hint" style="margin-top: 18px; border-top: 1px solid var(--line-2); padding-top: 14px;">
+      Прототип команды «АСКК-Добыча» — ЮФУ.Про Исследования, 2026<br/>
+      <span style="color:var(--ink-3)">Опик · Алейников · Рязанцев · Соловьев · Швецова</span>
+    </div>
   </div>
 </div>
 
@@ -999,7 +1075,7 @@
         </div>
         <div class="brand-text">
           <div class="wordmark">АСКК<span class="dot">·</span>ДОБЫЧА</div>
-          <div class="tagline">оперативная панель · v0.1 · прототип</div>
+          <div class="tagline">оперативная панель · ЮФУ.Про · 2026</div>
         </div>
       </div>
 
@@ -1017,6 +1093,10 @@
         <button class="btn btn-primary" id="new-order-btn" style="display:none">
           <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 2v10M2 7h10"/></svg>
           Новый наряд
+        </button>
+        <button class="btn btn-ghost" id="about-btn" title="О проекте и команде">
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" style="width:13px;height:13px"><circle cx="7" cy="7" r="5.5"/><path d="M7 6v4M7 4v.5"/></svg>
+          О проекте
         </button>
         <button class="btn btn-ghost" id="logout-btn">Выйти</button>
       </div>
@@ -1120,6 +1200,50 @@
       </section>
     </div>
 
+    <!-- CV demo -->
+    <section class="card" id="cv-panel">
+      <div class="card-head">
+        <div class="card-title">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="2" width="12" height="12" rx="1"/><circle cx="6" cy="6" r="1.4"/><path d="M14 10l-3-3-5 5"/></svg>
+          Демо компьютерного зрения
+          <span class="counter" id="cv-detector-label">—</span>
+        </div>
+        <div style="font-size: 11px; color: var(--muted); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em;">
+          YOLOv8 · прокси через /api/v1/cv
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="cv-layout">
+          <div class="cv-input">
+            <div class="row">
+              <label for="cv-file">Фото</label>
+              <input id="cv-file" type="file" accept="image/*" />
+            </div>
+            <div class="row">
+              <label for="cv-detector">Детектор</label>
+              <select id="cv-detector">
+                <option value="">по умолчанию</option>
+              </select>
+            </div>
+            <div class="row">
+              <button class="btn btn-primary" id="cv-run" disabled>
+                <span class="spin" id="cv-spin" style="display:none"></span>
+                Запустить детекцию
+              </button>
+              <button class="btn btn-ghost" id="cv-clear" type="button">Очистить</button>
+            </div>
+            <div class="cv-stage" id="cv-stage">
+              <div class="placeholder">Выберите фото для детекции</div>
+            </div>
+          </div>
+          <div>
+            <div class="meta" id="cv-meta" style="margin-bottom: 8px;">Результаты появятся здесь</div>
+            <div class="cv-results" id="cv-results"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- Acts breakdown -->
     <section class="card">
       <div class="card-head">
@@ -1134,9 +1258,13 @@
       <div class="card-body acts-grid" id="acts-breakdown">…</div>
     </section>
 
-    <footer style="text-align: center; color: var(--muted); font-size: 12px; padding: 20px 0;">
+    <footer style="text-align: center; color: var(--muted); font-size: 12px; padding: 20px 0; line-height: 1.8;">
       Прототип · синтетические данные · <a href="http://localhost:8000/docs" target="_blank">API docs</a> ·
       <code>python scripts/demo.py</code> для полного E2E
+      <div style="margin-top: 8px; color: var(--ink-3);">
+        © 2026 · команда «АСКК-Добыча» ·
+        Опик М.Ю. · Алейников Н.В. · Рязанцев К.А. · Соловьев Д.С. · Швецова А.И.
+      </div>
     </footer>
   </main>
 
@@ -1245,6 +1373,49 @@
     </div>
   </div>
 
+  <div id="about-modal" class="modal-bg">
+    <div class="modal" style="max-width: 640px;">
+      <h2>О проекте</h2>
+      <div class="modal-body" style="font-size: 13.5px; line-height: 1.65; color: var(--ink-2);">
+        <p style="margin-top:0;">
+          <b>АСКК «Татнефть-Добыча»</b> — прототип автоматизированной системы
+          контроля качества работ подрядчиков. Переход от визуального и бумажного
+          контроля к цифровой модели с объективным подтверждением: геолокация,
+          фотофиксация, чек-листы, данные АСУ ТП и CV-детекция дефектов.
+        </p>
+        <p>
+          Подготовлен в рамках программы <b>«ЮФУ.Про Исследования»</b> командой
+          из 5 человек. Демо-стенд поднят на оборудовании ЮФУ; данные
+          синтетические; интеграции с реальной АСУ ТП и СЭД — за рамками MVP.
+        </p>
+
+        <h3 style="margin: 18px 0 10px; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted);">
+          Команда
+        </h3>
+        <table class="orders" style="width: 100%;">
+          <tbody>
+            <tr><td class="num" style="width:40%">Опик М.Ю.</td><td style="color:var(--ink-3)">Backend · ML · CV-инференс, rule engine</td></tr>
+            <tr><td class="num">Алейников Н.В.</td><td style="color:var(--ink-3)">Frontend · ML · дашборд, мобильное приложение, CV-демо</td></tr>
+            <tr><td class="num">Рязанцев К.А.</td><td style="color:var(--ink-3)">Fullstack · REST-контракты, склейка, девопс</td></tr>
+            <tr><td class="num">Соловьев Д.С.</td><td style="color:var(--ink-3)">Аналитика · требования, сценарии E2E, формализация правил</td></tr>
+            <tr><td class="num">Швецова А.И.</td><td style="color:var(--ink-3)">UX/UI дизайн · дизайн-система, состояния интерфейса</td></tr>
+          </tbody>
+        </table>
+
+        <h3 style="margin: 18px 0 10px; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted);">
+          Стек
+        </h3>
+        <div style="font-family: var(--font-mono); font-size: 12px; color: var(--ink-3); line-height: 1.7;">
+          Python 3.11 · FastAPI · SQLAlchemy 2 (async) · PostgreSQL + TimescaleDB ·
+          MinIO · Redis · YOLOv8 (Ultralytics) · vanilla JS
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn btn-ghost" id="about-close">Закрыть</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toast" class="toast" style="display:none"></div>
 </div>
 
@@ -1291,6 +1462,15 @@ const STATUS_META = {
 
 const $ = (id) => document.getElementById(id);
 
+const esc = (s) =>
+  String(s ?? "").replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[c]);
+
 // ===========================================================================
 // API helpers
 // ===========================================================================
@@ -1302,8 +1482,9 @@ async function api(path, opts = {}) {
   if (r.status === 401) { logout(); throw new Error("сессия истекла"); }
   if (!r.ok) {
     const txt = await r.text();
-    try { throw new Error(JSON.parse(txt).detail || `HTTP ${r.status}`); }
-    catch { throw new Error(`HTTP ${r.status}: ${txt.slice(0, 100)}`); }
+    let detail = `HTTP ${r.status}`;
+    try { detail = JSON.parse(txt).detail || detail; } catch { /* не JSON — оставляем дефолт */ }
+    throw new Error(typeof detail === "string" ? detail : `HTTP ${r.status}: ${txt.slice(0, 100)}`);
   }
   return r.status === 204 ? null : r.json();
 }
@@ -1336,8 +1517,12 @@ async function login() {
       body: JSON.stringify({ email, password }),
     });
     if (!r.ok) {
-      const d = await r.json();
-      $("login-error").textContent = d.detail || "Ошибка входа";
+      let detail = `Ошибка входа (HTTP ${r.status})`;
+      try {
+        const d = await r.json();
+        if (d && d.detail) detail = d.detail;
+      } catch { /* ответ не JSON — отдаём код */ }
+      $("login-error").textContent = detail;
       return;
     }
     const data = await r.json();
@@ -1352,6 +1537,7 @@ async function login() {
 }
 function logout() {
   localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(EMAIL_KEY);
   showLogin();
 }
 function showLogin() {
@@ -1368,10 +1554,12 @@ function showApp() {
     } else {
       $("app").style.display = "block";
       loadDashboard();
+      setupAutoRefresh();
     }
-  }).catch(() => {
-    $("app").style.display = "block";
-    loadDashboard();
+  }).catch((e) => {
+    // /auth/me упал (401/403/сеть) — api() сам вызвал logout() на 401
+    // иначе просто возвращаем на логин
+    if ($("login").style.display === "none") showLogin();
   });
 }
 
@@ -1409,11 +1597,11 @@ async function loadDashboard() {
     _allOrders = ordR;
     applyOrderFilter();
   } else {
-    $("recent-orders").innerHTML = `<div class="empty">${ordR?.__err || "—"}</div>`;
+    $("recent-orders").innerHTML = `<div class="empty">${esc(ordR?.__err || "—")}</div>`;
   }
 
   if (rankR && !rankR.__err) renderRanking(rankR);
-  else $("ranking").innerHTML = `<div class="empty">${rankR?.__err || "—"}</div>`;
+  else $("ranking").innerHTML = `<div class="empty">${esc(rankR?.__err || "—")}</div>`;
 
   if (actsR && !actsR.__err) {
     renderActsBreakdown(actsR);
@@ -1422,6 +1610,9 @@ async function loadDashboard() {
 
   if (anomR && !anomR.__err) renderAnomalies(anomR);
   else $("anomaly-panel").style.display = "none";
+
+  // CV-демо: подтянуть список детекторов (не критично, если CV лежит)
+  loadCvDetectors();
 
   _lastRefreshAt = new Date();
   updateRefreshLabel();
@@ -1476,8 +1667,8 @@ function renderOrders(orders) {
       <tbody>
         ${orders
           .map(
-            (o) => `<tr data-oid="${o.id}">
-              <td class="num">${o.number}</td>
+            (o) => `<tr data-oid="${esc(o.id)}">
+              <td class="num">${esc(o.number)}</td>
               <td>${statusCell(o.status)}</td>
               <td class="ts">${fmtDate(o.created_at)}</td>
             </tr>`,
@@ -1500,7 +1691,7 @@ function renderRanking(contractors) {
       (c, i) => `
       <div class="ranking-row top-${i + 1}">
         <div class="place">${String(i + 1).padStart(2, "0")}</div>
-        <div class="name">${c.name}</div>
+        <div class="name">${esc(c.name)}</div>
         <div class="score">${(c.rating_score ?? 0).toFixed(1)}</div>
         <div class="bar-wrap"><div class="bar-fill" style="width:${Math.min(100, c.rating_score)}%"></div></div>
       </div>`,
@@ -1539,22 +1730,22 @@ function renderAnomalies(anom) {
     const sevColor = a.severity === "critical" ? "var(--err)" : "var(--warn)";
     const isCrit = a.severity === "critical";
     const sugg = a.suggested_work_type_code
-      ? `<span class="wt-chip" style="background: var(--surface-2); color: var(--accent); border: 1px solid var(--border);">→ ${a.suggested_work_type_code}</span>`
+      ? `<span class="wt-chip" style="background: var(--surface-2); color: var(--accent); border: 1px solid var(--border);">→ ${esc(a.suggested_work_type_code)}</span>`
       : "";
     return `
     <div class="anomaly-card ${isCrit ? "critical" : ""}">
         <div class="anom-bar" style="background: ${sevColor}"></div>
         <div class="anom-body">
           <div class="anom-head">
-            <span class="sev" style="color: ${sevColor}">${a.severity.toUpperCase()}</span>
-            <span class="eq">${a.equipment_serial || ""}</span>
+            <span class="sev" style="color: ${sevColor}">${esc(a.severity.toUpperCase())}</span>
+            <span class="eq">${esc(a.equipment_serial || "")}</span>
             ${sugg}
           </div>
-          <div class="anom-obj">${a.object_name || a.object_id || ""}</div>
-          <div class="anom-desc">${a.description}</div>
+          <div class="anom-obj">${esc(a.object_name || a.object_id || "")}</div>
+          <div class="anom-desc">${esc(a.description)}</div>
         </div>
         <div class="anom-actions">
-          <button type="button" class="btn btn-primary btn-small" data-anom-create='${JSON.stringify(a).replace(/'/g, "&#39;")}'>
+          <button type="button" class="btn btn-primary btn-small" data-anom-create='${esc(JSON.stringify(a))}'>
             Создать наряд
           </button>
         </div>
@@ -1580,26 +1771,31 @@ function renderReviewPanel(acts) {
     .map((a) => {
       const score = a.auto_check_score;
       const klass = score == null ? "" : score >= 0.7 ? "is-good" : "is-bad";
+      const cv = a.auto_check_details?.cv;
+      const cvLine = cv
+        ? ` · <span style="color:${cv.total_detections > 0 ? "var(--warn)" : "var(--ok)"}">CV: ${cv.total_detections} дет. (${esc(cv.detector || "?")})</span>`
+        : "";
       return `
-      <div class="review-item ${klass}" data-aid="${a.id}">
+      <div class="review-item ${klass}" data-aid="${esc(a.id)}">
         <div class="stripe"></div>
         <div>
           <div class="head">
-            <span class="num">${a.work_order_id.slice(0, 8).toUpperCase()}</span>
+            <span class="num">${esc(a.work_order_id.slice(0, 8).toUpperCase())}</span>
             ${statusCell(a.status)}
             <span class="ago">· ${fmtDate(a.created_at)}</span>
           </div>
           <div class="meta">
-            акт <code>${a.id.slice(0, 8).toUpperCase()}</code>
+            акт <code>${esc(a.id.slice(0, 8).toUpperCase())}</code>
             ${a.actual_latitude ? ` · 📍 ${parseFloat(a.actual_latitude).toFixed(4)}, ${parseFloat(a.actual_longitude).toFixed(4)}` : ""}
             ${a.auto_check_passed === true ? ` · <span style="color:var(--ok)">auto-проверка пройдена</span>` : ""}
             ${a.auto_check_passed === false ? ` · <span style="color:var(--bad)">auto-проверка: дефекты</span>` : ""}
+            ${cvLine}
           </div>
         </div>
         <div class="score">${score == null ? "—" : (score * 100).toFixed(0)}</div>
         <input class="comment" data-cmt placeholder="Комментарий мастера (необязательно)" />
-        <button class="btn btn-ghost btn-sm" data-act="reject" data-aid="${a.id}">✗ Отклонить</button>
-        <button class="btn btn-success btn-sm" data-act="confirm" data-aid="${a.id}">✓ Подтвердить</button>
+        <button class="btn btn-ghost btn-sm" data-act="reject" data-aid="${esc(a.id)}">✗ Отклонить</button>
+        <button class="btn btn-success btn-sm" data-act="confirm" data-aid="${esc(a.id)}">✓ Подтвердить</button>
       </div>`;
     })
     .join("");
@@ -1633,16 +1829,16 @@ async function openOrderDetail(orderId) {
     $("detail-title").textContent = `Наряд ${order.number}`;
     $("detail-body").innerHTML = `
       <dl class="kv-grid">
-        <dt>Номер</dt><dd><strong>${order.number}</strong></dd>
+        <dt>Номер</dt><dd><strong>${esc(order.number)}</strong></dd>
         <dt>Статус</dt><dd>${statusCell(order.status)}</dd>
-        <dt>Объект</dt><dd>${order.object_id}</dd>
-        <dt>Подрядчик</dt><dd>${order.contractor_id ?? "—"}</dd>
+        <dt>Объект</dt><dd>${esc(order.object_id)}</dd>
+        <dt>Подрядчик</dt><dd>${esc(order.contractor_id ?? "—")}</dd>
         <dt>Плановое начало</dt><dd>${fmtDate(order.planned_start_at)}</dd>
         <dt>Плановое окончание</dt><dd>${fmtDate(order.planned_end_at)}</dd>
         <dt>Факт. начало</dt><dd>${fmtDate(order.actual_start_at)}</dd>
         <dt>Факт. окончание</dt><dd>${fmtDate(order.actual_end_at)}</dd>
-        <dt>План. стоимость</dt><dd>${order.planned_cost ?? "—"} ₽</dd>
-        <dt>Описание</dt><dd style="font-family:var(--font-sans)">${order.description || "—"}</dd>
+        <dt>План. стоимость</dt><dd>${esc(order.planned_cost ?? "—")} ₽</dd>
+        <dt>Описание</dt><dd style="font-family:var(--font-sans)">${esc(order.description || "—")}</dd>
         <dt>Создан</dt><dd>${fmtDate(order.created_at)}</dd>
       </dl>
       <h3 style="margin: 24px 0 10px; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);">
@@ -1656,7 +1852,7 @@ async function openOrderDetail(orderId) {
                 ${acts
                   .map(
                     (a) => `<tr>
-                      <td class="num">${a.id.slice(0, 8).toUpperCase()}</td>
+                      <td class="num">${esc(a.id.slice(0, 8).toUpperCase())}</td>
                       <td>${statusCell(a.status)}</td>
                       <td class="num">${a.auto_check_score == null ? "—" : (a.auto_check_score * 100).toFixed(0) + "%"}</td>
                       <td class="ts">${fmtDate(a.created_at)}</td>
@@ -1669,7 +1865,7 @@ async function openOrderDetail(orderId) {
       }
     `;
   } catch (e) {
-    $("detail-body").innerHTML = `<div class="empty">Ошибка: ${e.message}</div>`;
+    $("detail-body").innerHTML = `<div class="empty">Ошибка: ${esc(e.message)}</div>`;
   }
 }
 
@@ -1705,11 +1901,11 @@ async function loadOrderFormData() {
 
   $("of-worktype").innerHTML =
     `<option value="">— сначала диагностика, тип уточним —</option>` +
-    workTypesCache.map((w) => `<option value="${w.id}">${w.code} · ${w.name}</option>`).join("");
+    workTypesCache.map((w) => `<option value="${esc(w.id)}">${esc(w.code)} · ${esc(w.name)}</option>`).join("");
 
   $("of-object").innerHTML =
     `<option value="">— выберите —</option>` +
-    objectsCache.map((o) => `<option value="${o.id}">${o.code} · ${o.name}</option>`).join("");
+    objectsCache.map((o) => `<option value="${esc(o.id)}">${esc(o.code)} · ${esc(o.name)}</option>`).join("");
 
   filterContractorsByWorkType();
 }
@@ -1724,7 +1920,7 @@ function filterContractorsByWorkType() {
     : contractorsCache;
   $("of-contractor").innerHTML =
     `<option value="">— выберите —</option>` +
-    list.map((c) => `<option value="${c.id}">${c.name} · ★ ${(c.rating_score ?? 0).toFixed(1)}</option>`).join("") +
+    list.map((c) => `<option value="${esc(c.id)}">${esc(c.name)} · ★ ${(c.rating_score ?? 0).toFixed(1)}</option>`).join("") +
     (list.length === 0 ? `<option value="" disabled>Нет подрядчиков с допуском</option>` : "");
 }
 
@@ -1746,11 +1942,11 @@ function showAnomalyHint(anom) {
   $("of-anomaly-body").innerHTML = `
     <div style="color: ${sevColor}; font-weight: 600; margin-bottom: 4px;">
       ${anom.severity === "critical" ? "КРИТИЧНО" : "ВНИМАНИЕ"} ·
-      ${anom.equipment_serial || ""}
+      ${esc(anom.equipment_serial || "")}
     </div>
-    <div>${anom.description}</div>
+    <div>${esc(anom.description)}</div>
     <div style="font-size: 11px; color: var(--muted); font-family: var(--font-mono); margin-top: 4px;">
-      рекомендуемый тип работ: <b>${anom.suggested_work_type_code || "—"}</b>
+      рекомендуемый тип работ: <b>${esc(anom.suggested_work_type_code || "—")}</b>
     </div>
   `;
   // Предлагаем сразу поставить suggested work_type
@@ -1856,6 +2052,174 @@ async function submitOrder(e) {
 }
 
 // ===========================================================================
+// CV demo
+// ===========================================================================
+const CV_PALETTE = [
+  "#d68a2c", "#8aaa5a", "#6e9bb1", "#c66a4f", "#d6a648",
+  "#9b6bcc", "#3aa6a0", "#cc6699", "#a07a4a", "#5a8c4a",
+];
+
+function cvColorFor(label) {
+  let h = 0;
+  for (let i = 0; i < label.length; i++) h = (h * 31 + label.charCodeAt(i)) | 0;
+  return CV_PALETTE[Math.abs(h) % CV_PALETTE.length];
+}
+
+let _cvFile = null;
+let _cvImageEl = null;
+
+function setCvRunEnabled() {
+  $("cv-run").disabled = !_cvFile;
+}
+
+function clearCvStage() {
+  const stage = $("cv-stage");
+  stage.innerHTML = `<div class="placeholder">Выберите фото для детекции</div>`;
+  $("cv-results").innerHTML = "";
+  $("cv-meta").textContent = "Результаты появятся здесь";
+  $("cv-detector-label").textContent = "—";
+}
+
+function drawCvDetections(detections) {
+  const stage = $("cv-stage");
+  stage.innerHTML = "";
+  if (!_cvImageEl) return;
+  stage.appendChild(_cvImageEl);
+  const w = _cvImageEl.naturalWidth || _cvImageEl.width;
+  const h = _cvImageEl.naturalHeight || _cvImageEl.height;
+  if (!w || !h) return;
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  ctx.lineWidth = Math.max(2, Math.round(Math.min(w, h) / 250));
+  ctx.font = `${Math.max(12, Math.round(Math.min(w, h) / 28))}px var(--font-mono, monospace)`;
+  detections.forEach((d, i) => {
+    const b = d.bbox || {};
+    const x = +b.x_min, y = +b.y_min, x2 = +b.x_max, y2 = +b.y_max;
+    if (![x, y, x2, y2].every(Number.isFinite)) return;
+    const color = cvColorFor(d.label || `d${i}`);
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.strokeRect(x, y, x2 - x, y2 - y);
+    const label = `${d.label} ${(d.confidence * 100).toFixed(0)}%`;
+    const padX = 6, padY = 4;
+    const tw = ctx.measureText(label).width;
+    const tx = x, ty = Math.max(0, y - ctx.lineWidth - 4);
+    ctx.globalAlpha = 0.85;
+    ctx.fillRect(tx, ty - 18, tw + padX * 2, 18 + padY);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = "#1a1814";
+    ctx.fillText(label, tx + padX, ty - 5);
+  });
+  stage.appendChild(canvas);
+}
+
+function loadCvDetectors() {
+  api("/cv/detectors")
+    .then((d) => {
+      const sel = $("cv-detector");
+      sel.innerHTML = `<option value="">по умолчанию (${esc(d.active || "?")})</option>` +
+        (d.supported || []).map((x) => `<option value="${esc(x)}">${esc(x)}</option>`).join("");
+      $("cv-detector-label").textContent = d.available === false ? "недоступен" : esc(d.active || "?");
+    })
+    .catch((e) => {
+      $("cv-detector-label").textContent = "ошибка";
+      toast("CV-сервис недоступен: " + e.message, true);
+    });
+}
+
+function onCvFile(e) {
+  const f = e.target.files?.[0];
+  if (!f) return;
+  if (!/^image\//.test(f.type)) {
+    toast("Нужен файл изображения", true);
+    return;
+  }
+  if (f.size > 15 * 1024 * 1024) {
+    toast("Файл больше 15 МБ", true);
+    return;
+  }
+  _cvFile = f;
+  setCvRunEnabled();
+  const url = URL.createObjectURL(f);
+  const img = new Image();
+  img.onload = () => {
+    const stage = $("cv-stage");
+    stage.innerHTML = "";
+    img.className = "cv-img";
+    stage.appendChild(img);
+    _cvImageEl = img;
+  };
+  img.onerror = () => toast("Не удалось декодировать изображение", true);
+  img.src = url;
+  $("cv-results").innerHTML = "";
+  $("cv-meta").textContent = `Файл: ${esc(f.name)} (${(f.size / 1024).toFixed(1)} КБ)`;
+}
+
+async function runCv() {
+  if (!_cvFile) return;
+  const runBtn = $("cv-run");
+  const spin = $("cv-spin");
+  runBtn.disabled = true;
+  spin.style.display = "inline-block";
+  $("cv-results").innerHTML = "";
+  $("cv-meta").textContent = "Отправляем в CV-сервис…";
+  try {
+    const fd = new FormData();
+    fd.append("file", _cvFile);
+    const detector = $("cv-detector").value;
+    const url = detector ? `/cv/infer?detector=${encodeURIComponent(detector)}` : "/cv/infer";
+    const token = localStorage.getItem(TOKEN_KEY);
+    const r = await fetch(`${API}${url}`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: fd,
+    });
+    if (!r.ok) {
+      let detail = `HTTP ${r.status}`;
+      try { detail = (await r.json()).detail || detail; } catch { /* не JSON */ }
+      throw new Error(detail);
+    }
+    const data = await r.json();
+    onCvResult(data);
+  } catch (err) {
+    $("cv-meta").textContent = `Ошибка: ${esc(err.message)}`;
+    toast("CV: " + err.message, true);
+  } finally {
+    runBtn.disabled = false;
+    spin.style.display = "none";
+  }
+}
+
+function onCvResult(data) {
+  const dets = data.detections || [];
+  const meta = data.image_size || {};
+  $("cv-meta").textContent =
+    `детектор: ${esc(data.detector || "?")} · ` +
+    `найдено: ${dets.length} · ` +
+    `латентность: ${(data.latency_ms ?? 0).toFixed(1)} мс · ` +
+    `размер: ${meta.width || "?"}×${meta.height || "?"}`;
+  drawCvDetections(dets);
+  $("cv-results").innerHTML = dets.length === 0
+    ? `<div class="meta">Объекты не найдены (пороги conf/IoU см. в .env CV-сервиса)</div>`
+    : dets
+        .slice()
+        .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))
+        .map((d) => {
+          const b = d.bbox || {};
+          const color = cvColorFor(d.label);
+          return `<div class="cv-row">
+            <div class="swatch" style="background:${color}"></div>
+            <div class="label">${esc(d.label)}</div>
+            <div class="conf">${(d.confidence * 100).toFixed(1)}%</div>
+            <div class="bbox">[${Math.round(b.x_min)},${Math.round(b.y_min)} → ${Math.round(b.x_max)},${Math.round(b.y_max)}]</div>
+          </div>`;
+        })
+        .join("");
+}
+
+// ===========================================================================
 // Auto-refresh + counters in chips
 // ===========================================================================
 function updateRefreshLabel() {
@@ -1918,6 +2282,18 @@ $("order-form").addEventListener("submit", submitOrder);
 $("detail-close").addEventListener("click", () => $("detail-modal").classList.remove("open"));
 $("order-modal").addEventListener("click", (e) => { if (e.target.id === "order-modal") closeOrderModal(); });
 $("detail-modal").addEventListener("click", (e) => { if (e.target.id === "detail-modal") $("detail-modal").classList.remove("open"); });
+$("about-btn").addEventListener("click", () => $("about-modal").classList.add("open"));
+$("about-close").addEventListener("click", () => $("about-modal").classList.remove("open"));
+$("about-modal").addEventListener("click", (e) => { if (e.target.id === "about-modal") $("about-modal").classList.remove("open"); });
+
+$("cv-file").addEventListener("change", onCvFile);
+$("cv-run").addEventListener("click", runCv);
+$("cv-clear").addEventListener("click", () => {
+  _cvFile = null;
+  $("cv-file").value = "";
+  clearCvStage();
+  setCvRunEnabled();
+});
 
 document.addEventListener("click", (e) => {
   const tr = e.target.closest("tr[data-oid]");
@@ -2002,9 +2378,9 @@ async function renderFieldList() {
   $("field-body").innerHTML = `
     ${myContr ? `<div class="welcome-block">
       <div class="org">Подрядчик</div>
-      <div class="name">${myContr.name}</div>
+      <div class="name">${esc(myContr.name)}</div>
       <div class="meta">
-        <span>ИНН <b>${myContr.inn}</b></span>
+        <span>ИНН <b>${esc(myContr.inn)}</b></span>
         <span>Рейтинг <b style="color:var(--ok)">${(myContr.rating_score || 0).toFixed(1)}</b></span>
         <span>Актов <b>${acts.length}</b></span>
       </div>
@@ -2033,26 +2409,26 @@ async function renderFieldList() {
 }
 
 function orderCardHTML(o) {
-  return `<button class="order-card" data-oid="${o.id}">
+  return `<button class="order-card" data-oid="${esc(o.id)}">
     <div class="stripe ${STATUS_META[o.status]?.bar || "gray"}"></div>
     <div class="row1">
-      <div class="num">${o.number}</div>
+      <div class="num">${esc(o.number)}</div>
       ${fieldPill(o.status)}
     </div>
-    <div class="meta">Объект <b>${o.object_id.slice(0, 8)}</b> · ${fmtDate(o.created_at)}</div>
+    <div class="meta">Объект <b>${esc(o.object_id.slice(0, 8))}</b> · ${fmtDate(o.created_at)}</div>
   </button>`;
 }
 
 function actCardHTML(a) {
   const score = a.auto_check_score;
-  return `<button class="order-card" data-aid="${a.id}">
+  return `<button class="order-card" data-aid="${esc(a.id)}">
     <div class="stripe ${STATUS_META[a.status]?.bar || "gray"}"></div>
     <div class="row1">
-      <div class="num">${a.id.slice(0, 8).toUpperCase()}</div>
+      <div class="num">${esc(a.id.slice(0, 8).toUpperCase())}</div>
       ${fieldPill(a.status)}
     </div>
     <div class="meta">
-      Наряд <b>${a.work_order_id.slice(0, 8).toUpperCase()}</b>
+      Наряд <b>${esc(a.work_order_id.slice(0, 8).toUpperCase())}</b>
       · ${fmtDate(a.created_at)}
       ${score != null ? ` · score <b>${(score * 100).toFixed(0)}%</b>` : ""}
     </div>
@@ -2116,16 +2492,16 @@ function renderChecklistView() {
   const tpl = _fieldState.template;
   const steps = tpl.steps || [];
 
-  $("field-title").innerHTML = `<small>${order.number}</small>Чек-лист · ${steps.length} шагов`;
+  $("field-title").innerHTML = `<small>${esc(order.number)}</small>Чек-лист · ${steps.length} шагов`;
 
   const filled = Object.keys(_fieldState.responses || {}).length;
   const pct = steps.length ? Math.round((filled / steps.length) * 100) : 0;
 
   $("field-body").innerHTML = `
     <div class="order-summary">
-      <div class="number">${order.number}</div>
-      <div class="title">${tpl.name || "Чек-лист"}</div>
-      <div class="where">Объект <b>${order.object_id.slice(0, 8).toUpperCase()}</b></div>
+      <div class="number">${esc(order.number)}</div>
+      <div class="title">${esc(tpl.name || "Чек-лист")}</div>
+      <div class="where">Объект <b>${esc(order.object_id.slice(0, 8).toUpperCase())}</b></div>
     </div>
 
     <div class="progress"><div style="width: ${pct}%"></div></div>
@@ -2190,24 +2566,24 @@ function stepHTML(s, i) {
   } else if (s.data_type === "numeric") {
     const val = r.value_numeric != null ? r.value_numeric : "";
     input = `<div class="step-input">
-      <input type="number" step="0.01" data-step="${s.id}" data-kind="numeric" value="${val}" placeholder="${norm.nominal ?? ""}" />
-      ${norm.unit ? `<div class="step-norm">ед.: ${norm.unit} · норма: ${norm.nominal} ± ${norm.tolerance}</div>` : ""}
+      <input type="number" step="0.01" data-step="${esc(s.id)}" data-kind="numeric" value="${val}" placeholder="${norm.nominal ?? ""}" />
+      ${norm.unit ? `<div class="step-norm">ед.: ${esc(norm.unit)} · норма: ${esc(norm.nominal)} ± ${esc(norm.tolerance)}</div>` : ""}
     </div>`;
   } else if (s.data_type === "text") {
     input = `<div class="step-input">
-      <textarea data-step="${s.id}" data-kind="text" placeholder="Введите заключение…">${r.value_text || ""}</textarea>
+      <textarea data-step="${esc(s.id)}" data-kind="text" placeholder="Введите заключение…">${esc(r.value_text || "")}</textarea>
     </div>`;
   } else {
     input = `<div class="step-input">
-      <input type="text" data-step="${s.id}" data-kind="text" value="${r.value_text || ""}" />
+      <input type="text" data-step="${esc(s.id)}" data-kind="text" value="${esc(r.value_text || "")}" />
     </div>`;
   }
-  return `<div class="step ${required} ${passed}" data-step-card="${s.id}">
+  return `<div class="step ${required} ${passed}" data-step-card="${esc(s.id)}">
     <div class="step-head">
       <div>
         <div class="step-num">ШАГ ${i + 1} / ${(_fieldState.template?.steps || []).length}${s.is_required ? " · ОБЯЗАТЕЛЬНО" : ""}</div>
-        <div class="step-title">${s.title}</div>
-        ${s.description ? `<div class="step-desc">${s.description}</div>` : ""}
+        <div class="step-title">${esc(s.title)}</div>
+        ${s.description ? `<div class="step-desc">${esc(s.description)}</div>` : ""}
       </div>
     </div>
     ${input}
@@ -2313,15 +2689,19 @@ async function onPhotoChange(e) {
       headers: { Authorization: `Bearer ${token}` },
       body: fd,
     });
-    if (!r.ok) throw new Error((await r.json()).detail || "upload failed");
+    if (!r.ok) {
+      let detail = `HTTP ${r.status}`;
+      try { detail = (await r.json()).detail || detail; } catch { /* не JSON */ }
+      throw new Error(detail);
+    }
     const photo = await r.json();
     _fieldState.photos = _fieldState.photos || {};
     _fieldState.photos[kind] = photo;
-    // Перерисовать плитку
     const tmp = document.createElement("div");
     tmp.innerHTML = photoTileHTML(kind, kind === "before" ? "до" : kind === "after" ? "после" : "ещё");
-    tile.replaceWith(tmp.firstElementChild);
-    tmp.firstElementChild.querySelector("input").addEventListener("change", onPhotoChange);
+    const newTile = tmp.firstElementChild;
+    tile.replaceWith(newTile);
+    newTile.querySelector("input").addEventListener("change", onPhotoChange);
     fieldToast("Фото загружено ✓" + (photo.has_exif_gps ? " (GPS из EXIF)" : ""));
   } catch (err) {
     fieldToast("Ошибка: " + err.message, true);
@@ -2374,7 +2754,7 @@ async function submitAct() {
 
 function renderResultView() {
   const r = _fieldState.lastResult;
-  $("field-title").innerHTML = `<small>${_fieldState.order.number}</small>Готово`;
+  $("field-title").innerHTML = `<small>${esc(_fieldState.order.number)}</small>Готово`;
   const score = r.auto_check_score;
   const passed = r.auto_check_passed;
   const icon = passed ? "✓" : passed === false ? "✗" : "?";

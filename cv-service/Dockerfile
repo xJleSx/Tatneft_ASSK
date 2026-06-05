@@ -1,9 +1,13 @@
 # ---------- Builder ----------
 FROM python:3.11-slim AS builder
 
-# CPU-only torch: ~200 MB вместо ~2 GB
+# CPU-only torch + torchvision с совпадающими версиями (ultralytics
+# требует парных torch/torchvision, иначе operator torchvision::nms
+# не зарегистрирован).
 RUN pip install --no-cache-dir \
-    torch --index-url https://download.pytorch.org/whl/cpu
+    "torch==2.4.1" \
+    "torchvision==0.19.1" \
+    --index-url https://download.pytorch.org/whl/cpu
 
 # ---------- Runtime ----------
 FROM python:3.11-slim AS runtime
@@ -33,8 +37,9 @@ RUN pip install --no-cache-dir \
         "httpx>=0.27" \
         "ultralytics>=8.3"
 
-# Код
+# Код и веса (defect.pt едет в образ — прод-деплой без отдельного тома)
 COPY app ./app
+COPY weights ./weights
 
 # Непривилегированный пользователь
 RUN useradd -m -u 10001 cvuser
