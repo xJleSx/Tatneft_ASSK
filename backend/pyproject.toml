@@ -8,9 +8,9 @@ license = { text = "Proprietary" }
 authors = [
     { name = "Опик М.Ю.",     email = "opik@tatneft.local" },
     { name = "Алейников Н.В.", email = "aleynikov@tatneft.local" },
-    { name = "Рязанцев К.А.",  email = "ryazantsev@tatneft.local" },
-    { name = "Соловьев Д.С.",  email = "solovyov@tatneft.local" },
-    { name = "Швецова А.И.",   email = "shvetsova@tatneft.local" },
+    { name = "Рязанцев А.А.",  email = "ryazantsev@tatneft.local" },
+    { name = "Соловьёв М.В.",  email = "solovyov@tatneft.local" },
+    { name = "Швецова В.Д.",   email = "shvetsova@tatneft.local" },
 ]
 
 dependencies = [
